@@ -7,11 +7,7 @@ class Model_class(object):
     def __init__(self, **kwargs):
         self.Model_name = kwargs['Model_name']
         self.kwargs = kwargs
-        self.input_placeholder = None
-        self.output_placeholder = None
-        self.output = None
-        self.optimizer
-      
+
 
     def Set_loss(self, params):
         self.loss = params  #Const loss func
