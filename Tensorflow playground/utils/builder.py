@@ -10,11 +10,14 @@ class Builder(object):
         self.Image_height = kwargs['Image_height']
         self.Image_cspace = kwargs['Image_cspace']
 
+
     def __enter__(self):
         return self 
 
+
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
+
 
     def Weight_variable(self, shape):
         with tf.name_scope('Weight') as scope:
@@ -32,7 +35,6 @@ class Builder(object):
             return biases
 
 
-
     def Conv2d_layer(self, input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32):
         with tf.name_scope('Conv') as scope:
             bias = self.Bias_variable(filters)
@@ -47,8 +49,6 @@ class Builder(object):
             return final_conv
 
 
-
-
     def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1]):
         with tf.name_scope('Pool') as scope:
             Pool = tf.nn.max_pool(input, ksize=k_size, \
@@ -56,8 +56,6 @@ class Builder(object):
             if self.Summary:
                 tf.summary.histogram('Pool_activations', Pool)
             return Pool
-
-
 
 
     def FC_layer(self, input, filters=1024, readout=False): #Expects flattened layer
@@ -82,9 +80,11 @@ class Builder(object):
                 tf.summary.histogram('Final_activations', final_output)
             return(final_output)
 
+
     def Reshape_input(self, input, width=28, height=28, colorspace=1):
         with tf.name_scope('Pre-proc') as scope:
             return (tf.reshape(input, [-1, int(width), int(height), int(colorspace)]))
+
 
     def variable_summaries(self, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""

@@ -70,7 +70,7 @@ class Model_class(object):
             if(step + 1) % 100 == 0:
                 #enter test and saver block
                 #add saving op
-                self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/lenet.ckpt',global_step=self.global_step)
+                self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/lenet.ckpt', global_step=self.global_step)
                 if self.kwargs['Summary']:
                     summary, train_accuracy = session.run([self.merged, self.accuracy], \
                         feed_dict={self.input_placeholder: batch[0], self.output_placeholder: batch[1]})
