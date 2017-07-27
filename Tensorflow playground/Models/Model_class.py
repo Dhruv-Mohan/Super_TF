@@ -45,6 +45,9 @@ class Model_class(object):
             graph_writer.add_graph(session.graph)
             graph_writer.close();
 
+    def Construct_Predict_op(self):
+        with tf.name_scope('Predict'):
+            self.Predict_op = tf.argmax(self.output, 1)
 
     def Try_restore(self,session):
         latest_ckpt = tf.train.latest_checkpoint(self.kwargs['Save_dir'] + '/mdl/')
@@ -55,8 +58,11 @@ class Model_class(object):
         else:
             print('Ckpt_not_found')
 
+    def Predict(self, session, input_data):
+        out = session.run([self.Predict_op], feed_dict={self.input_placeholder: input_data})
+        return(out)
 
-    def Train_Iter(self, session, iterations, data , restore=True):
+    def Train_Iter(self, session, iterations, data, restore=True):
 
         #Try restore
         if restore:
@@ -90,4 +96,6 @@ class Model_class(object):
             else:
                 _ = session.run([self.train_step], \
                     feed_dict={self.input_placeholder: batch[0], self.output_placeholder: batch[1]})
+
+
 
