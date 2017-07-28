@@ -6,7 +6,7 @@
 *.user
 *.userosscache
 *.sln.docstates
-
+Tensorflow_playgraound.py
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
