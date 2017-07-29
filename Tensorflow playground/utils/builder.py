@@ -35,13 +35,13 @@ class Builder(object):
             return biases
 
 
-    def Conv2d_layer(self, input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32):
+    def Conv2d_layer(self, input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME'):
         with tf.name_scope('Conv') as scope:
             bias = self.Bias_variable(filters)
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape)
-            proto_conv = tf.nn.conv2d(input, weights, strides=stride, padding="SAME", name="CONV") + bias
+            proto_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
             final_conv = tf.nn.relu(proto_conv)
             if self.Summary:
                 tf.summary.histogram('Pre_activations', proto_conv)
@@ -49,10 +49,10 @@ class Builder(object):
             return final_conv
 
 
-    def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1]):
+    def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1], padding='SAME'):
         with tf.name_scope('Pool') as scope:
             Pool = tf.nn.max_pool(input, ksize=k_size, \
-                strides=stride, padding="SAME", name="POOL")
+                strides=stride, padding=padding, name="POOL")
             if self.Summary:
                 tf.summary.histogram('Pool_activations', Pool)
             return Pool
@@ -84,6 +84,14 @@ class Builder(object):
     def Reshape_input(self, input, width=28, height=28, colorspace=1):
         with tf.name_scope('Pre-proc') as scope:
             return (tf.reshape(input, [-1, int(width), int(height), int(colorspace)]))
+
+    def Pad_layer(self, input, p_size=[2, 2], p_type="CONSTANT"):
+        with tf.name_scope('Pad') as scope:
+            return(tf.pad(input, [[0, 0], [p_size[0], p_size[0]], [p_size[1], p_size[1]], [0, 0]], mode=p_type, name='Pad'))
+
+
+    def Dropout_layer(self, input, keep_prob, seed=None):
+        return(tf.nn.dropout(input, keep_prob=keep_prob, seed=seed, name="Dropout"))
 
 
     def variable_summaries(self, var):

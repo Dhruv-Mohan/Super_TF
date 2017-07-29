@@ -24,8 +24,10 @@ class Model_class(object):
 
 
     def Construct_Model(self):
-        [self.input_placeholder, self.output_placeholder, self.output] = Factory(**self.kwargs).get_model()
-
+        self.placeholder_list = Factory(**self.kwargs).get_model()
+        [self.input_placeholder, self.output_placeholder, self.output] = self.placeholder_list[0: 3]
+        #UPDATE FACTORY FUNCTION OUTPUT FOR MULTIPLE CONTROL PLACEHOLDERS
+        #LOOK INTO CREATING FEED DICTS 
 
     def Construct_Accuracy_op(self):
         with tf.name_scope('accuracy'):
