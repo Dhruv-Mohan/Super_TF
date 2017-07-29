@@ -22,20 +22,17 @@ class Factory(object):
 
                 #FEATURE EXTRACTION
                 conv1 = alexnet_builder.Conv2d_layer(input_reshape, stride=[1, 4, 4, 1], k_size=[11, 11], filters=96, padding='VALID')
-                pool1 = alexnet_builder.Pool_layer(conv1, k_size=[1, 3, 3, 1])
+                pool1 = alexnet_builder.Pool_layer(conv1, k_size=[1, 3, 3, 1], padding='VALID')
 
                 pad1 = alexnet_builder.Pad_layer(pool1, p_type='SYMMETRIC')
                 conv2 = alexnet_builder.Conv2d_layer(pad1, k_size=[5, 5], filters=256, padding='VALID')
-                pool2 = alexnet_builder.Pool_layer(conv2, k_size=[1, 3, 3, 1])
+                pool2 = alexnet_builder.Pool_layer(conv2, k_size=[1, 3, 3, 1], padding='VALID')
 
-                pad2 = alexnet_builder.Pad_layer(pool2, p_size=[1, 1], p_type='SYMMETRIC')
-                conv3 = alexnet_builder.Conv2d_layer(pad2, filters=384, padding='VALID')
+                conv3 = alexnet_builder.Conv2d_layer(pool2, filters=384)
 
-                pad3 = alexnet_builder.Pad_layer(conv3, p_size=[1, 1], p_type='SYMMETRIC')
-                conv4 = alexnet_builder.Conv2d_layer(pad3, filters=384, padding='VALID')
+                conv4 = alexnet_builder.Conv2d_layer(conv3, filters=384)
 
-                pad4 = alexnet_builder.Pad_layer(conv4, p_size=[1, 1], p_type='SYMMETRIC')
-                conv5 = alexnet_builder.Conv2d_layer(pad4, filters=256, padding='VALID')
+                conv5 = alexnet_builder.Conv2d_layer(conv4, filters=256)
                 pool5 = alexnet_builder.Pool_layer(conv5, k_size=[1, 3, 3, 1])
 
                 #DENSELY CONNECTED
