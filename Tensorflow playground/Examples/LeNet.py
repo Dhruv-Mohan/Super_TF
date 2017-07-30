@@ -34,7 +34,7 @@ def main():
     #Set loss
         with tf.name_scope('Cross_entropy'):
             Simple_DNN.Set_loss(tf.reduce_mean(
-            tf.nn.softmax_cross_entropy_with_logits(labels=Simple_DNN.output_placeholder, logits=Simple_DNN.output)))
+            tf.nn.softmax_cross_entropy_with_logits(labels=Simple_DNN.model_dict['Output_ph'], logits=Simple_DNN.model_dict['Output'])))
 
 
 

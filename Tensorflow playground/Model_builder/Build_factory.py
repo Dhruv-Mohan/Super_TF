@@ -44,7 +44,8 @@ class Factory(object):
 
                 output = alexnet_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
 
-                return(input_placeholder, output_placeholder, output, dropout_prob_placeholder)
+                Alexnet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder }
+                return(Alexnet_dict)
            
     def Build_Lenet(self):
         with tf.name_scope('LeNeT_Model'):
@@ -63,7 +64,9 @@ class Factory(object):
 
                 fc1 = lenet_builder.FC_layer(pool2);
                 output = lenet_builder.FC_layer(fc1, filters=self.kwargs['Classes'], readout=True)
-                return(input_placeholder, output_placeholder, output)
+
+                Lenet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output}
+                return(Lenet_dict)
 
 
 
