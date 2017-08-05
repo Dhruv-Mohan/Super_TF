@@ -49,9 +49,9 @@ def main():
     #Training block
     with tf.Session() as session:
         session.run(tf.global_variables_initializer())
-        Simple_DNN.Construct_Writers(session)
-        Simple_DNN.Train_Iter(session, _ITERATIONS_, mnist.train, restore=_RESTORE_)
-        Predictions = Simple_DNN.Predict(session,mnist.train.next_batch(10)[0])
+        Simple_DNN.Construct_Writers()
+        Simple_DNN.Train_Iter(iterations=_ITERATIONS_, data=mnist.train, restore=_RESTORE_)
+        Predictions = Simple_DNN.Predict(input_data = mnist.train.next_batch(10)[0])
 
 
 if __name__ == "__main__":

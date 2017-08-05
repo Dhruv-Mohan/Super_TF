@@ -51,7 +51,10 @@ class Model_class(object):
                 self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 
-    def Construct_Writers(self,session):
+    def Construct_Writers(self, session=None):
+        #Get default session
+        if session is None:
+            session = tf.get_default_session()
         self.saver = tf.train.Saver()
         if self.kwargs['Summary']:
             self.train_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/train/', session.graph)
@@ -67,7 +70,10 @@ class Model_class(object):
             self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
 
 
-    def Try_restore(self,session):
+    def Try_restore(self,session=None):
+        #Get default session
+        if session is None:
+            session = tf.get_default_session()
         latest_ckpt = tf.train.latest_checkpoint(self.kwargs['Save_dir'] + '/mdl/')
         if latest_ckpt:
             print('Ckpt_found')
@@ -77,7 +83,10 @@ class Model_class(object):
             print('Ckpt_not_found')
 
 
-    def Predict(self, session, input_data):
+    def Predict(self, input_data, session=None):
+        #Get default session
+        if session is None:
+            session = tf.get_default_session()
         #Construct Predict dict
         IO_predict_dict = {self.model_dict['Input_ph']: input_data}
 
@@ -88,7 +97,10 @@ class Model_class(object):
         return(out)
 
 
-    def Train_Iter(self, session, iterations, data, restore=True):
+    def Train_Iter(self, iterations, data, restore=True, session=None):
+        #Get default session
+        if session is None:
+            session = tf.get_default_session()
         #Try restore
         if restore:
             self.Try_restore(session)
