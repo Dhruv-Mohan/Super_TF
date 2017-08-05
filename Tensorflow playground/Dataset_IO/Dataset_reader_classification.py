@@ -4,7 +4,7 @@ import tensorflow as tf
 
 
 class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification):
-    """description of class"""
+    """Implementation of Dataset reader for classification"""
 
 
     def __init__(self,filename=None,epochs=100,image_shape=[]):

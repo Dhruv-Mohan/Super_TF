@@ -2,7 +2,7 @@ import tensorflow as tf
 
 
 class Dataset_conifg_classification(object):
-    """description of class"""
+    """Shared config for classification Dataset """
 
     def __init__(self):
         self._Image_handle     = 'image_raw'

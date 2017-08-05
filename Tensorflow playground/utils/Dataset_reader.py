@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 class Dataset_reader(object):
-    """description of class"""
+    """Interface Class for reading Dataset objects"""
 
     def single_read(self):{}
 

@@ -4,7 +4,7 @@ import tensorflow as tf
 import os
 
 class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer):
-    """description of class"""
+    """Implementation of Dataset writer for classification"""
 
     def __init__(self, Dataset_filename, image_shape=[]):
         super().__init__()

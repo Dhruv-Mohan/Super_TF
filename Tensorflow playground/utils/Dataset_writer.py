@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 class Dataset_writer(object):
-    """description of class"""
+    """Interface class for writing datasets"""
 
     @staticmethod
     def _int64_feature(value):
