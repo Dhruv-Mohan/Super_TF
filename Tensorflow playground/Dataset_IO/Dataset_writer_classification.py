@@ -1,6 +1,5 @@
 from utils.Dataset_writer import Dataset_writer
 from Dataset_IO.Dataset_conifg_classification import Dataset_conifg_classification
-from Dataset_IO import Dataset_classification_pb2
 import tensorflow as tf
 import os
 
@@ -16,28 +15,6 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
             self._Depth_handle  : self._int64_feature(image_shape[2]),\
             self._Label_handle  : None,\
             self._Image_handle  : None}
-
-        test = Dataset_classification_pb2.Image_set()
-        test.Image_headers.image_width = 227
-        test.Image_headers.image_height = 227
-        test.Image_headers.image_depth = 3
-        f = open('test.protobuf', "wb")
-        f.write(test.SerializeToString())
-        f.close()
-        test = Dataset_classification_pb2.Image_set()
-        f = open('test.protobuf', "rb")
-        test.ParseFromString(f.read())
-        f.close()
-
-        print("IMAGE HEIGHT")
-        print(test.Image_headers.image_height)
-        print(test.Image_headers.image_width)
-        print(test.Image_headers.image_depth)
-
-
-        f = open('test.protobuf', "ab")
-        f.write(test.SerializeToString())
-        f.close()
             
 
     def filename_constructor(self, filename_path = None, file_dict= None):
@@ -61,11 +38,6 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
 
         im_pth = tf.placeholder(tf.string)
         image_raw = tf.read_file(im_pth)
-        f = open('test.protobuf', "rb")
-        test = Dataset_classification_pb2.Image_set()
-        test.ParseFromString(f.read())
-        f.close()
-        f = open('test.protobuf',"ab")
         for lab in range(len(self.image_list)):
             for entry in self.image_list[lab]:
                 im_rw = self.sess.run([image_raw],feed_dict={im_pth: entry})
@@ -74,5 +46,4 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
                 example = tf.train.Example(features=tf.train.Features(feature=self.Param_dict))
                 self._Writer.write(example.SerializeToString())
                 
-        f.write(test.SerializeToString())
         self._Writer.close()
