@@ -1,5 +1,6 @@
 from utils.Dataset_writer import Dataset_writer
 from Dataset_IO.Dataset_conifg_classification import Dataset_conifg_classification
+from Dataset_IO import Dataset_classification_pb2
 import tensorflow as tf
 import os
 
@@ -16,26 +17,62 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
             self._Label_handle  : None,\
             self._Image_handle  : None}
 
+        test = Dataset_classification_pb2.Image_set()
+        test.Image_headers.image_width = 227
+        test.Image_headers.image_height = 227
+        test.Image_headers.image_depth = 3
+        f = open('test.protobuf', "wb")
+        f.write(test.SerializeToString())
+        f.close()
+        test = Dataset_classification_pb2.Image_set()
+        f = open('test.protobuf', "rb")
+        test.ParseFromString(f.read())
+        f.close()
 
-    def filename_constructor(self, filename_path):
+        print("IMAGE HEIGHT")
+        print(test.Image_headers.image_height)
+        print(test.Image_headers.image_width)
+        print(test.Image_headers.image_depth)
+
+
+        f = open('test.protobuf', "ab")
+        f.write(test.SerializeToString())
+        f.close()
+            
+
+    def filename_constructor(self, filename_path = None, file_dict= None):
         self.image_list=[]
-        with os.scandir(filename_path) as it:
-            for entry in it:
-                if entry.is_dir():
-                    images=os.listdir(entry.path)
-                    images_full_path = list(map(lambda x: entry.path +'/' + x, images))
-                    self.image_list.append(images_full_path)
+        if filename_path is not None:
+            with os.scandir(filename_path) as it:
+                for entry in it:
+                    if entry.is_dir():
+                        images=os.listdir(entry.path)
+                        images_full_path = list(map(lambda x: entry.path +'/' + x, images))
+                        self.image_list.append(images_full_path)
+        elif file_dict is not None:
+            for key in sorted(file_dict):
+                self.image_list.append(file_dict[key])
 
     def write_record(self, sess=None):
         if sess is None:
             self.sess = tf.get_default_session()
         else:
             self.sess = sess
+
+        im_pth = tf.placeholder(tf.string)
+        image_raw = tf.read_file(im_pth)
+        f = open('test.protobuf', "rb")
+        test = Dataset_classification_pb2.Image_set()
+        test.ParseFromString(f.read())
+        f.close()
+        f = open('test.protobuf',"ab")
         for lab in range(len(self.image_list)):
             for entry in self.image_list[lab]:
-                image_raw = tf.read_file(entry).eval()
+                im_rw = self.sess.run([image_raw],feed_dict={im_pth: entry})
                 self.Param_dict[self._Label_handle] = self._int64_feature(lab)
-                self.Param_dict[self._Image_handle] = self._bytes_feature(image_raw)
+                self.Param_dict[self._Image_handle] = self._bytes_feature(im_rw[0])
                 example = tf.train.Example(features=tf.train.Features(feature=self.Param_dict))
                 self._Writer.write(example.SerializeToString())
+                
+        f.write(test.SerializeToString())
         self._Writer.close()
