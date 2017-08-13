@@ -97,7 +97,7 @@ class Model_class(object):
         return(out)
 
 
-    def Train_Iter(self, iterations, data, restore=True, session=None):
+    def Train_Iter(self, iterations, test_iterations, data, restore=True, session=None):
         #Get default session
         if session is None:
             session = tf.get_default_session()
@@ -107,7 +107,8 @@ class Model_class(object):
 
         if self.kwargs['Summary']:
             self.merged = tf.summary.merge_all()
-
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord)
         for step in range(iterations):
             batch = data.next_batch(self.kwargs['Batch_size'])
             #IO feed dict
@@ -116,10 +117,10 @@ class Model_class(object):
             train_feed_dict = {**IO_feed_dict, **self.train_dict}
             
             #Test block TODO: Add param for variable test iteration
-            if(step + 1) % 100 == 0:
+            if(step + 1) % test_iterations == 0:
                 #Construst Test dict
                 test_feed_dict = {**IO_feed_dict, **self.test_dict}
-                self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/lenet.ckpt', global_step=self.global_step)
+                self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/' + self.Model_name + '.ckpt', global_step=self.global_step)
                 if self.kwargs['Summary']:
                     summary, train_accuracy = session.run([self.merged, self.accuracy], \
                         feed_dict=test_feed_dict)
@@ -132,13 +133,16 @@ class Model_class(object):
             print('step %d' %(step))
 
             #Train Step
-            if self.kwargs['Summary']:
+            if False:
+            #if self.kwargs['Summary']:
                 summary,  _ = session.run([self.merged, self.train_step], \
                     feed_dict=train_feed_dict)
                 self.train_writer.add_summary(summary, step)
             else:
                 _ = session.run([self.train_step], \
                     feed_dict=train_feed_dict)
+        coord.request_stop()
+        coord.join(threads)
 
 
 

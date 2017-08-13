@@ -12,4 +12,4 @@ class Dataset_reader(object):
 
     def batch_inputs(self):{}
 
-    def get_next_batch(self):{}
+    def next_batch(self):{}

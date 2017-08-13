@@ -7,40 +7,42 @@ class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification
     """Implementation of Dataset reader for classification"""
 
 
-    def __init__(self,filename=None,epochs=100,image_shape=[]):
+    def __init__(self, filename=None, epochs=100, image_shape=[], num_classes=10):
 
         super().__init__()
         self.batch_size = tf.placeholder(tf.int32, name='Dataset_batch_size')
         self.image_shape =  image_shape
+        self.num_classes = num_classes
         self.open_dataset(filename=filename, epochs=epochs)
-        self.images , self.sparse_labels = self.batch_inputs()
-
+        self.images , self.one_hot_labels = self.batch_inputs()
 
 
     def single_read(self):
         features = tf.parse_single_example(self.serialized_example, features=self._Feature_dict)
         image = tf.image.decode_image(features[self._Image_handle])
-        shape = tf.stack([features[self._Height_handle], features[self._Width_handle], features[self._Depth_handle]])
         image.set_shape(self.image_shape)
         return image , features[self._Label_handle]
 
+    def pre_process_image(self,pre_process_op):
+        self.images = pre_process_op(self.images)
+        
 
     def batch_inputs(self):
         image , label = self.single_read()
-        images , sparse_labels = tf.train.shuffle_batch([image , label], batch_size=self.batch_size, num_threads=4, capacity=1000 + 30, min_after_dequeue=1000)
-        return images, sparse_labels
+        images , sparse_labels = tf.train.shuffle_batch([image , label], batch_size=self.batch_size, num_threads=8, capacity=5000+128, min_after_dequeue=5000)
+        one_hot_labels = tf.one_hot(sparse_labels,self.num_classes)
+        return images, one_hot_labels
         #TODO: CONFIGURABLE PARAMS
 
 
-    def get_next_batch(self, batch_size=1, sess=None):
+    def next_batch(self, batch_size=1, sess=None):
         if sess is None :
             self.sess = tf.get_default_session()
         else:
             self.sess = sess
+        images , labels = self.sess.run([self.images , self.one_hot_labels], feed_dict={self.batch_size : batch_size})
+        if self.pre_process :
+            images = self.sess.run([self.pre_process_op], feed_dict={self.image_placeholder : images})
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
-        images , labels = self.sess.run([self.images , self.sparse_labels], feed_dict={self.batch_size : batch_size})
-        coord.request_stop()
-        coord.join(threads)
         return images , labels 
+

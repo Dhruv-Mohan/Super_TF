@@ -30,7 +30,9 @@ DATA/
 def main():
     dummy_writer = Dataset_writer_classification(Dataset_filename=_DATASET_NAME_,\
        image_shape=[_IMAGE_HEIGHT_, _IMAGE_WIDTH_, _IMAGE_CSPACE_])
-    dummy_writer.filename_constructor(_DATA_PATH_)
+    
+    #Writer accepts path of the data as described above or a dictionary with labels as keys and a list of file names of the corresponding lable as values
+    dummy_writer.filename_constructor(filename_path=_DATA_PATH_)
 
     with tf.Session() as sess:
         dummy_writer.write_record()
