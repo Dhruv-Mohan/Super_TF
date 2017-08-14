@@ -156,7 +156,9 @@ class Factory(object):
 
                 Alexnet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder }
                 return(Alexnet_dict)
-           
+
+
+
     def Build_Lenet(self):
         with tf.name_scope('LeNeT_Model'):
             #with Builder(Summary=True,Batch_size=50,Image_width=28,Image_height=28,Image_cspace=1) as lenet_builder:
@@ -180,16 +182,9 @@ class Factory(object):
 
 
 
-
-
-
-
     def __init__(self, **kwargs):
         #TODO: WRITE ERROR HANDLER AND PARSER 
         self.model_name = kwargs['Model_name']
         self.summary = kwargs['Summary']
         self.kwargs = kwargs
         #Add more params as required
-
-
-

@@ -85,6 +85,7 @@ class Builder(object):
         with tf.name_scope('Pre-proc') as scope:
             return (tf.reshape(input, [-1, int(width), int(height), int(colorspace)]))
 
+
     def Pad_layer(self, input, p_size=[2, 2], p_type="CONSTANT"):
         with tf.name_scope('Pad') as scope:
             return(tf.pad(input, [[0, 0], [p_size[0], p_size[0]], [p_size[1], p_size[1]], [0, 0]], mode=p_type, name='Pad'))
@@ -92,6 +93,34 @@ class Builder(object):
 
     def Dropout_layer(self, input, keep_prob, seed=None):
         return(tf.nn.dropout(input, keep_prob=keep_prob, seed=seed, name="Dropout"))
+
+
+    def _BN_TRAIN(input, pop_mean, pop_var, scale, beta, decay):
+        with tf.name_scope('BN_TRAIN') as scope:
+            batch_mean, batch_var = tf.nn.moments(input, [0, 1, 2])
+            train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1- decay))
+            train_var = tf.assign(pop_var, pop_var * decay + batch_var * (1- decay))
+
+            with tf.control_dependencies([train_mean, train_var]): #Further study into control_D required 
+                return tf.nn.batch_normalization(input, batch_mean, batch_var, beta, scale, epsilon, name="BN_TRAIN")
+
+
+    def _BN_TEST(input, pop_mean, pop_var, scale, beta):
+        with tf.name_scope('BN_TEST') as scope:
+            return tf.nn.batch_normalization(input, pop_mean, pop_var, beta, scale, epsilon, name="BN_TEST")
+
+
+    def Batch_norm(self, input, batch_type, decay=0.99, epsilon=1e-3):
+        ''' https://r2rt.com/implementing-batch-normalization-in-tensorflow.html for an explanation of the code'''
+        with tf.name_scope('Batch_norm') as scope:
+            pop_mean = tf.Variable(tf.zeros([input.get_shape()[-1]]), trainable=False)
+            pop_var = tf.Variable(tf.ones([input.get_shape()[-1]]), trainable=False)
+
+            scale = tf.Variable(tf.ones([input.get_shape()[-1]]))
+            beta = tf.Variable(tf.zeros([input.get_shape()[-1]]))
+
+            return tf.cond(tf.equal(batch_type, True), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
+
 
 
     def variable_summaries(self, var):
