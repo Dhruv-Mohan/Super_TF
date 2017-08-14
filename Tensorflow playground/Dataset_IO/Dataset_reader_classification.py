@@ -10,11 +10,12 @@ class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification
     def __init__(self, filename=None, epochs=100, image_shape=[], num_classes=10):
 
         super().__init__()
-        self.batch_size = tf.placeholder(tf.int32, name='Dataset_batch_size')
-        self.image_shape =  image_shape
-        self.num_classes = num_classes
-        self.open_dataset(filename=filename, epochs=epochs)
-        self.images , self.one_hot_labels = self.batch_inputs()
+        with tf.name_scope('Dataset_Classification_Reader') as scope:
+            self.batch_size = tf.placeholder(tf.int32, name='Dataset_batch_size')
+            self.image_shape =  image_shape
+            self.num_classes = num_classes
+            self.open_dataset(filename=filename, epochs=epochs)
+            self.images , self.one_hot_labels = self.batch_inputs()
 
 
     def single_read(self):
@@ -23,8 +24,10 @@ class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification
         image.set_shape(self.image_shape)
         return image , features[self._Label_handle]
 
+
     def pre_process_image(self,pre_process_op):
-        self.images = pre_process_op(self.images)
+        with tf.name_scope('Pre_Processing_op') as scope:
+            self.images = pre_process_op(self.images)
         
 
     def batch_inputs(self):
@@ -36,13 +39,11 @@ class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification
 
 
     def next_batch(self, batch_size=1, sess=None):
-        if sess is None :
-            self.sess = tf.get_default_session()
-        else:
-            self.sess = sess
-        images , labels = self.sess.run([self.images , self.one_hot_labels], feed_dict={self.batch_size : batch_size})
-        if self.pre_process :
-            images = self.sess.run([self.pre_process_op], feed_dict={self.image_placeholder : images})
-
-        return images , labels 
+        with tf.name_scope('Batch_geter') as scope:
+            if sess is None :
+                self.sess = tf.get_default_session()
+            else:
+                self.sess = sess
+            images , labels = self.sess.run([self.images , self.one_hot_labels], feed_dict={self.batch_size : batch_size})
+            return images , labels 
 

@@ -17,15 +17,16 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
     """Implementation of Dataset writer for classification"""
 
     def __init__(self, Dataset_filename, image_shape=[]):
-        self.image_shape = image_shape
-        super().__init__()
-        self.construct_writer(Dataset_filename)
-        self.Param_dict = {\
-            self._Height_handle : self._int64_feature(image_shape[0]),\
-            self._Width_handle  : self._int64_feature(image_shape[1]),\
-            self._Depth_handle  : self._int64_feature(image_shape[2]),\
-            self._Label_handle  : None,\
-            self._Image_handle  : None}
+        with tf.name_scope('Dataset_Classification_Writer') as scope:
+            self.image_shape = image_shape
+            super().__init__()
+            self.construct_writer(Dataset_filename)
+            self.Param_dict = {\
+                self._Height_handle : self._int64_feature(image_shape[0]),\
+                self._Width_handle  : self._int64_feature(image_shape[1]),\
+                self._Depth_handle  : self._int64_feature(image_shape[2]),\
+                self._Label_handle  : None,\
+                self._Image_handle  : None}
 
 
     def prune_data(self, image):
@@ -70,24 +71,25 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
 
 
     def write_record(self, sess=None):
-        if sess is None:
-            self.sess = tf.get_default_session()
-        else:
-            self.sess = sess
+        with tf.name_scope('Dataset_Classification_Writer') as scope:
+            if sess is None:
+                self.sess = tf.get_default_session()
+            else:
+                self.sess = sess
 
-        im_pth = tf.placeholder(tf.string)
-        image_raw = tf.read_file(im_pth)
-        total_images = len(self.shuffled_images)
-        print('\t\t Constructing Database')
+            im_pth = tf.placeholder(tf.string)
+            image_raw = tf.read_file(im_pth)
+            total_images = len(self.shuffled_images)
+            print('\t\t Constructing Database')
 
-        for index , image_container in enumerate(self.shuffled_images):
-            printProgressBar(index+1, total_images)
-            im_rw = self.sess.run([image_raw],feed_dict={im_pth: image_container.image_path})
-            self.Param_dict[self._Label_handle] = self._int64_feature(image_container.image_data)
-            self.Param_dict[self._Image_handle] = self._bytes_feature(im_rw[0])
-            example = tf.train.Example(features=tf.train.Features(feature=self.Param_dict))
-            self._Writer.write(example.SerializeToString())
-        self._Writer.close()
+            for index , image_container in enumerate(self.shuffled_images):
+                printProgressBar(index+1, total_images)
+                im_rw = self.sess.run([image_raw],feed_dict={im_pth: image_container.image_path})
+                self.Param_dict[self._Label_handle] = self._int64_feature(image_container.image_data)
+                self.Param_dict[self._Image_handle] = self._bytes_feature(im_rw[0])
+                example = tf.train.Example(features=tf.train.Features(feature=self.Param_dict))
+                self._Writer.write(example.SerializeToString())
+            self._Writer.close()
 
 
 #From: https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
