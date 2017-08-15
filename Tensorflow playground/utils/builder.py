@@ -35,14 +35,21 @@ class Builder(object):
             return biases
 
 
-    def Conv2d_layer(self, input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME'):
+    def Conv2d_layer(self, input, *, batch_type, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True):
         with tf.name_scope('Conv') as scope:
             bias = self.Bias_variable(filters)
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape)
             proto_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
-            final_conv = tf.nn.relu(proto_conv)
+            if Activation: #Prepare for Resnet
+                final_conv = tf.nn.relu(proto_conv)
+
+            ''' Add batch norm
+            if Batch_norm:
+                #Append bathc norm block
+            '''
+
             if self.Summary:
                 tf.summary.histogram('Pre_activations', proto_conv)
                 tf.summary.histogram('Final_activations', final_conv)
