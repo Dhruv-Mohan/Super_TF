@@ -23,25 +23,28 @@ class Factory(object):
                 train_state_placeholder = tf.placeholder(tf.bool, name="Train_State")
                 input_reshape = inceprv2_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
 
+                #Setting control params
+                inceprv2_builder.control_params(Dropout_control=dropout_prob_placeholder, Train_state=train_state_placeholder)
+                
                 #Construct functional building blocks
                 def stem():
                     with tf.name_scope('Stem'):
-                        conv1 = inceprv2_builder.Conv2d_layer(input_reshape, stride=[1,2,2,1], filters=32, padding='VALID', Batch_norm=True, batch_type=train_state_placeholder)
-                        conv2 = inceprv2_builder.Conv2d_layer(conv1, stride=[1,1,1,1], filters=32, padding='VALID', Batch_norm=True, batch_type=train_state_placeholder)
-                        conv3 = inceprv2_builder.Conv2d_layer(conv2, stride=[1,1,1,1], filters=64, padding='VALID', Batch_norm=True, batch_type=train_state_placeholder)
+                        conv1 = inceprv2_builder.Conv2d_layer(input_reshape, stride=[1,2,2,1], filters=32, padding='VALID', Batch_norm=True)
+                        conv2 = inceprv2_builder.Conv2d_layer(conv1, stride=[1,1,1,1], filters=32, padding='VALID', Batch_norm=True)
+                        conv3 = inceprv2_builder.Conv2d_layer(conv2, stride=[1,1,1,1], filters=64, padding='VALID', Batch_norm=True)
                         
-                        conv4a_split1 = inceprv2_builder.Conv2d_layer(conv3, stride=[1,2,2,1], filters=96, padding='VALID', Batch_norm=True, batch_type=train_state_placeholder)
+                        conv4a_split1 = inceprv2_builder.Conv2d_layer(conv3, stride=[1,2,2,1], filters=96, padding='VALID', Batch_norm=True)
                         pool1b_split1 = inceprv2_builder.Pool_layer(conv3, stride=[1,2,2,1], padding='VALID')
 
                         concat1 = inceprv2_builder.Concat([conv4a_split1, pool1b_split1])
 
-                        conv5a_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True, batch_type=train_state_placeholder)
-                        conv6a_split2 = inceprv2_builder.Conv2d_layer(conv5a_split2, stride=[1, 1, 1, 1], k_size=[7, 1], filters=64, Batch_norm=True, batch_type=train_state_placeholder)
-                        conv7a_split2 = inceprv2_builder.Conv2d_layer(conv6a_split2, stride=[1, 1, 1, 1], k_size=[1, 7], filters=64, Batch_norm=True, batch_type=train_state_placeholder)
-                        conv8a_split2 = inceprv2_builder.Conv2d_layer(conv7a_split2, stride=[1, 1, 1, 1], filters=96, Batch_norm=True, batch_type=train_state_placeholder)
+                        conv5a_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True)
+                        conv6a_split2 = inceprv2_builder.Conv2d_layer(conv5a_split2, stride=[1, 1, 1, 1], k_size=[7, 1], filters=64, Batch_norm=True)
+                        conv7a_split2 = inceprv2_builder.Conv2d_layer(conv6a_split2, stride=[1, 1, 1, 1], k_size=[1, 7], filters=64, Batch_norm=True)
+                        conv8a_split2 = inceprv2_builder.Conv2d_layer(conv7a_split2, stride=[1, 1, 1, 1], filters=96, Batch_norm=True)
 
-                        conv5b_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True, batch_type=train_state_placeholder)
-                        conv6b_split2 = inceprv2_builder.Conv2d_layer(conv5b_split2, stride=[1, 1, 1, 1],filters=96, padding='VALID', Batch_norm=True, batch_type=train_state_placeholder)
+                        conv5b_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True)
+                        conv6b_split2 = inceprv2_builder.Conv2d_layer(conv5b_split2, stride=[1, 1, 1, 1],filters=96, padding='VALID', Batch_norm=True)
 
 
     def Build_vgg19(self):
@@ -52,6 +55,9 @@ class Factory(object):
                 output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 input_reshape = vgg19_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+
+                #Setting control params
+                vgg19_builder.control_params(Dropout_control=dropout_prob_placeholder)
 
                 #FEATURE EXTRACTION
                 conv1a = vgg19_builder.Conv2d_layer(input_reshape, filters=64)
@@ -87,10 +93,10 @@ class Factory(object):
 
                 #DENSELY CONNECTED
                 fc1 = vgg19_builder.FC_layer(pool5, filters=4096)
-                drop1 = vgg19_builder.Dropout_layer(fc1, dropout_prob_placeholder)
+                drop1 = vgg19_builder.Dropout_layer(fc1)
 
                 fc2 = vgg19_builder.FC_layer(drop1, filters=4096)
-                drop2 = vgg19_builder.Dropout_layer(fc2, dropout_prob_placeholder)
+                drop2 = vgg19_builder.Dropout_layer(fc2)
 
                 output = vgg19_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
 
@@ -107,6 +113,9 @@ class Factory(object):
                 output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 input_reshape = vgg16_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+
+                #Setting control params
+                vgg16_builder.control_params(Dropout_control=dropout_prob_placeholder)
 
                 #FEATURE EXTRACTION
                 conv1a = vgg16_builder.Conv2d_layer(input_reshape, filters=64)
@@ -139,10 +148,10 @@ class Factory(object):
 
                 #DENSELY CONNECTED
                 fc1 = vgg16_builder.FC_layer(pool5, filters=4096)
-                drop1 = vgg16_builder.Dropout_layer(fc1, dropout_prob_placeholder)
+                drop1 = vgg16_builder.Dropout_layer(fc1)
 
                 fc2 = vgg16_builder.FC_layer(drop1, filters=4096)
-                drop2 = vgg16_builder.Dropout_layer(fc2, dropout_prob_placeholder)
+                drop2 = vgg16_builder.Dropout_layer(fc2)
 
                 output = vgg16_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
 
@@ -162,28 +171,31 @@ class Factory(object):
 
                 input_reshape = alexnet_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
 
+                #Setting control params
+                alexnet_builder.control_params(Dropout_control=dropout_prob_placeholder, Train_state=train_state_placeholder)
+
                 #FEATURE EXTRACTION
-                conv1 = alexnet_builder.Conv2d_layer(input_reshape, stride=[1, 4, 4, 1], k_size=[11, 11], filters=96, padding='VALID', batch_type=train_state_placeholder, Batch_norm=True)
+                conv1 = alexnet_builder.Conv2d_layer(input_reshape, stride=[1, 4, 4, 1], k_size=[11, 11], filters=96, padding='VALID', Batch_norm=True)
                 
                 pool1 = alexnet_builder.Pool_layer(conv1, k_size=[1, 3, 3, 1], padding='VALID')
 
                 pad1 = alexnet_builder.Pad_layer(pool1, p_type='SYMMETRIC')
-                conv2 = alexnet_builder.Conv2d_layer(pad1, k_size=[5, 5], filters=256, padding='VALID', batch_type=train_state_placeholder, Batch_norm=True)
+                conv2 = alexnet_builder.Conv2d_layer(pad1, k_size=[5, 5], filters=256, padding='VALID', Batch_norm=True)
 
                 pool2 = alexnet_builder.Pool_layer(conv2, k_size=[1, 3, 3, 1], padding='VALID')
 
-                conv3 = alexnet_builder.Conv2d_layer(pool2, filters=384, batch_type=train_state_placeholder, Batch_norm=True)
-                conv4 = alexnet_builder.Conv2d_layer(conv3, filters=384, batch_type=train_state_placeholder, Batch_norm=True)
-                conv5 = alexnet_builder.Conv2d_layer(conv4, filters=256, batch_type=train_state_placeholder, Batch_norm=True)
+                conv3 = alexnet_builder.Conv2d_layer(pool2, filters=384, Batch_norm=True)
+                conv4 = alexnet_builder.Conv2d_layer(conv3, filters=384, Batch_norm=True)
+                conv5 = alexnet_builder.Conv2d_layer(conv4, filters=256, Batch_norm=True)
 
                 pool5 = alexnet_builder.Pool_layer(conv5, k_size=[1, 3, 3, 1])
 
                 #DENSELY CONNECTED
                 fc1 = alexnet_builder.FC_layer(pool5, filters=4096)
-                drop1 = alexnet_builder.Dropout_layer(fc1, dropout_prob_placeholder)
+                drop1 = alexnet_builder.Dropout_layer(fc1)
 
                 fc2 = alexnet_builder.FC_layer(drop1, filters=4096)
-                drop2 = alexnet_builder.Dropout_layer(fc2, dropout_prob_placeholder)
+                drop2 = alexnet_builder.Dropout_layer(fc2)
 
                 output = alexnet_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
 

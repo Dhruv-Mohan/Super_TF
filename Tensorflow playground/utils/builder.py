@@ -9,6 +9,8 @@ class Builder(object):
         self.Image_width = kwargs['Image_width']
         self.Image_height = kwargs['Image_height']
         self.Image_cspace = kwargs['Image_cspace']
+        self.Dropout_control = None
+        self.Train_state= None
 
 
     def __enter__(self):
@@ -18,6 +20,9 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
+    def control_params(self, Dropout_control= None, Train_state= None):
+        self.Dropout_control = Dropout_control
+        self.Train_state = Train_state
 
     def Weight_variable(self, shape):
         with tf.name_scope('Weight') as scope:
@@ -35,8 +40,11 @@ class Builder(object):
             return biases
 
 
-    def Conv2d_layer(self, input, *, batch_type, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True):
+    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True):
         with tf.name_scope('Conv') as scope:
+            if batch_type is None:
+                batch_type=self.Train_state
+
             bias = self.Bias_variable(filters)
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
@@ -98,7 +106,9 @@ class Builder(object):
             return(tf.pad(input, [[0, 0], [p_size[0], p_size[0]], [p_size[1], p_size[1]], [0, 0]], mode=p_type, name='Pad'))
 
 
-    def Dropout_layer(self, input, keep_prob, seed=None):
+    def Dropout_layer(self, input, keep_prob=None, seed=None):
+        if keep_prob is None:
+            keep_prob=self.Dropout_control
         return(tf.nn.dropout(input, keep_prob=keep_prob, seed=seed, name="Dropout"))
 
 
