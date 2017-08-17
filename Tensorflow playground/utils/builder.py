@@ -42,13 +42,13 @@ class Builder(object):
             weight_shape = k_size + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape)
             proto_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
+
             if Activation: #Prepare for Resnet
                 final_conv = tf.nn.relu(proto_conv)
 
-            ''' Add batch norm
             if Batch_norm:
+                final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
                 #Append bathc norm block
-            '''
 
             if self.Summary:
                 tf.summary.histogram('Pre_activations', proto_conv)
@@ -102,7 +102,7 @@ class Builder(object):
         return(tf.nn.dropout(input, keep_prob=keep_prob, seed=seed, name="Dropout"))
 
 
-    def _BN_TRAIN(input, pop_mean, pop_var, scale, beta, decay):
+    def _BN_TRAIN(self, input, pop_mean, pop_var, scale, beta, epsilon, decay):
         with tf.name_scope('BN_TRAIN') as scope:
             batch_mean, batch_var = tf.nn.moments(input, [0, 1, 2])
             train_mean = tf.assign(pop_mean, pop_mean * decay + batch_mean * (1- decay))
@@ -112,12 +112,12 @@ class Builder(object):
                 return tf.nn.batch_normalization(input, batch_mean, batch_var, beta, scale, epsilon, name="BN_TRAIN")
 
 
-    def _BN_TEST(input, pop_mean, pop_var, scale, beta):
+    def _BN_TEST(self, input, pop_mean, pop_var, scale, beta, epsilon):
         with tf.name_scope('BN_TEST') as scope:
             return tf.nn.batch_normalization(input, pop_mean, pop_var, beta, scale, epsilon, name="BN_TEST")
 
 
-    def Batch_norm(self, input, batch_type, decay=0.99, epsilon=1e-3):
+    def Batch_norm(self, input, *, batch_type, decay=0.99, epsilon=1e-3):
         ''' https://r2rt.com/implementing-batch-normalization-in-tensorflow.html for an explanation of the code'''
         with tf.name_scope('Batch_norm') as scope:
             pop_mean = tf.Variable(tf.zeros([input.get_shape()[-1]]), trainable=False)
@@ -128,7 +128,9 @@ class Builder(object):
 
             return tf.cond(tf.equal(batch_type, True), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
 
-
+    def Concat(self, inputs, axis=3):
+        with tf.name_scope('Concat'):
+            return tf.concat(inputs, axis=axis)
 
     def variable_summaries(self, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""

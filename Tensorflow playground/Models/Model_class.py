@@ -33,6 +33,7 @@ class Model_class(object):
 
     def Set_optimizer(self, params):
         self.optimizer = params #Const optimizer params 
+        #gradients,_ = self.optimizer.compute_gradients(loss) Add max-norm
         self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
 
 
