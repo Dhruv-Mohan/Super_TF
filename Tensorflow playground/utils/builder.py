@@ -49,25 +49,28 @@ class Builder(object):
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape)
-            proto_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
+            final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
 
             if Activation: #Prepare for Resnet
-                final_conv = tf.nn.relu(proto_conv, name='Relu')
+                final_conv = tf.nn.relu(final_conv, name='Relu')
 
             if Batch_norm:
                 final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
                 #Append bathc norm block
 
             if self.Summary:
-                tf.summary.histogram('Pre_activations', proto_conv)
                 tf.summary.histogram('Final_activations', final_conv)
             return final_conv
 
 
-    def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1], padding='SAME'):
+    def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1], padding='SAME', pooling_type='MAX'):
         with tf.name_scope('Pool') as scope:
-            Pool = tf.nn.max_pool(input, ksize=k_size, \
-                strides=stride, padding=padding, name="POOL")
+            if pooling_type == 'MAX':
+                Pool = tf.nn.max_pool(input, ksize=k_size, \
+                    strides=stride, padding=padding, name="MAX_POOL")
+            elif pooling_type == 'AVG':
+                Pool = tf.nn.avg_pool(input, ksize=k_size, \
+                    strides=stride, padding=padding, name="AVG_POOL")
             if self.Summary:
                 tf.summary.histogram('Pool_activations', Pool)
             return Pool
