@@ -27,24 +27,159 @@ class Factory(object):
                 inceprv2_builder.control_params(Dropout_control=dropout_prob_placeholder, Train_state=train_state_placeholder)
                 
                 #Construct functional building blocks
-                def stem():
-                    with tf.name_scope('Stem'):
-                        conv1 = inceprv2_builder.Conv2d_layer(input_reshape, stride=[1,2,2,1], filters=32, padding='VALID', Batch_norm=True)
+                def stem(input):
+                    with tf.name_scope('Stem') as scope:
+                        conv1 = inceprv2_builder.Conv2d_layer(input, stride=[1,2,2,1], filters=32, padding='VALID', Batch_norm=True)
                         conv2 = inceprv2_builder.Conv2d_layer(conv1, stride=[1,1,1,1], filters=32, padding='VALID', Batch_norm=True)
-                        conv3 = inceprv2_builder.Conv2d_layer(conv2, stride=[1,1,1,1], filters=64, padding='VALID', Batch_norm=True)
+                        conv3 = inceprv2_builder.Conv2d_layer(conv2, stride=[1,1,1,1], filters=64, Batch_norm=True)
                         
-                        conv4a_split1 = inceprv2_builder.Conv2d_layer(conv3, stride=[1,2,2,1], filters=96, padding='VALID', Batch_norm=True)
-                        pool1b_split1 = inceprv2_builder.Pool_layer(conv3, stride=[1,2,2,1], padding='VALID')
+                        conv1a_split1 = inceprv2_builder.Conv2d_layer(conv3, stride=[1,2,2,1], filters=96, padding='VALID', Batch_norm=True)
+                        pool1b_split1 = inceprv2_builder.Pool_layer(conv3, padding='VALID')
 
-                        concat1 = inceprv2_builder.Concat([conv4a_split1, pool1b_split1])
+                        concat1 = inceprv2_builder.Concat([conv1a_split1, pool1b_split1])
 
-                        conv5a_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True)
-                        conv6a_split2 = inceprv2_builder.Conv2d_layer(conv5a_split2, stride=[1, 1, 1, 1], k_size=[7, 1], filters=64, Batch_norm=True)
-                        conv7a_split2 = inceprv2_builder.Conv2d_layer(conv6a_split2, stride=[1, 1, 1, 1], k_size=[1, 7], filters=64, Batch_norm=True)
-                        conv8a_split2 = inceprv2_builder.Conv2d_layer(conv7a_split2, stride=[1, 1, 1, 1], filters=96, Batch_norm=True)
+                        conv1a_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True)
+                        conv2a_split2 = inceprv2_builder.Conv2d_layer(conv1a_split2, stride=[1, 1, 1, 1], k_size=[7, 1], filters=64, Batch_norm=True)
+                        conv3a_split2 = inceprv2_builder.Conv2d_layer(conv2a_split2, stride=[1, 1, 1, 1], k_size=[1, 7], filters=64, Batch_norm=True)
+                        conv4a_split2 = inceprv2_builder.Conv2d_layer(conv3a_split2, stride=[1, 1, 1, 1], filters=96, padding='VALID', Batch_norm=True)
 
-                        conv5b_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True)
-                        conv6b_split2 = inceprv2_builder.Conv2d_layer(conv5b_split2, stride=[1, 1, 1, 1],filters=96, padding='VALID', Batch_norm=True)
+                        conv1b_split2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=64, Batch_norm=True)
+                        conv2b_split2 = inceprv2_builder.Conv2d_layer(conv1b_split2, stride=[1, 1, 1, 1], filters=96, padding='VALID', Batch_norm=True)
+
+                        concat2 = inceprv2_builder.Concat([conv4a_split2, conv2b_split2])
+
+                        pool1a_split3 = inceprv2_builder.Pool_layer(concat2, padding="VALID")
+                        conv1b_split3 = inceprv2_builder.Conv2d_layer(concat2, stride=[1, 2, 2, 1], filters=192, padding='VALID', Batch_norm=True)
+
+                        concat3 = inceprv2_builder.Concat([pool1a_split3, conv1b_split3])
+                        return concat3
+
+                def inception_resnet_A(input):
+                    with tf.name_scope('Inception_Resnet_A') as scope:
+                        conv1a_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=32, Batch_norm=True)
+                        conv2a_split1 = inceprv2_builder.Conv2d_layer(conv1a_split1, stride=[1, 1, 1, 1], filter=48, Batch_norm=True)
+                        conv3a_split1 = inceprv2_builder.Conv2d_layer(conv2a_split1, stride=[1, 1, 1, 1], filter=64, Batch_norm=True)
+
+                        conv1b_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=32, Batch_norm=True)
+                        conv2b_split1 = inceprv2_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], filter=32, Batch_norm=True)
+
+                        conv1c_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=32, Batch_norm=True)
+                        
+                        concat1 = inceprv2_builder.Concat([conv3a_split1, conv2b_split1, conv1c_split1])
+
+                        conv2 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=384, Batch_norm=True, Activation=False)
+
+                        #conv2_scale = inceprv2_builder.Scale_activations(conv2) look into scaling
+                        residual_out = inceprv2_builder.Residual_connect([input, conv2])
+
+                        return residual_out
+
+                def reduction_A(input):
+                    with tf.name_scope('Reduction_A') as scope:
+                        '''
+                        k=256, l=256, m=384, n=384
+                        '''
+                        conv1a_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=256, Batch_norm=True)
+                        conv2a_split1 = inceprv2_builder.Conv2d_layer(conv1a_split1, stride=[1, 1, 1, 1], filter=256, Batch_norm=True)
+                        conv3a_split1 = inceprv2_builder.Conv2d_layer(conv2a_split1, stride=[1, 2, 2, 1], filter=384, padding='VALID', Batch_norm=True)
+
+                        conv1b_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 2, 2, 1], filter=384, padding='VALID', Batch_norm=True)
+
+                        pool1c_split1 = inceprv2_builder.Pool_layer(input, padding='VALID')
+
+                        concat = inceprv2_builder.Concat([conv3a_split1, conv1b_split1, pool1c_split1])
+                        
+                        return concat
+
+                def inception_resnet_B(input):
+                    with tf.name_scope('Inception_Resnet_B') as scope:
+                        conv1a_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=128, Batch_norm=True)
+                        conv2a_split1 = inceprv2_builder.Conv2d_layer(conv1a_split1, stride=[1, 1, 1, 1], k_size=[1, 7], filter=160, Batch_norm=True)
+                        conv3a_split1 = inceprv2_builder.Conv2d_layer(conv2a_split1, stride=[1, 1, 1, 1], k_size=[7, 1], filter=192, Batch_norm=True)
+
+                        conv1b_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=192, Batch_norm=True)
+
+                        concat1 = inceprv2_builder.Concat(conv3a_split1, conv1b_split1)
+
+                        conv2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filter=1154, Batch_norm=True, Activation=False)
+                        conv2_scale = inceprv2_builder.Scale_activations(conv2)
+
+                        residual_out = inceprv2_builder.Residual_connect([input, conv2_scale])
+
+                def reduction_B(input):
+                    with tf.name_scope('Reduction_B') as scope:
+                        conv1a_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=256, Batch_norm=True)
+                        conv2a_split1 = inceprv2_builder.Conv2d_layer(conv1a_split1, stride=[1, 1, 1, 1], filter=288, Batch_norm=True)
+                        conv3a_split1 = inceprv2_builder.Conv2d_layer(conv2a_split1, stride=[1, 2, 2, 1], filter=320, padding='VALID', Batch_norm=True)
+
+                        conv1b_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=256, Batch_norm=True)
+                        conv2b_split1 = inceprv2_builder.Conv2d_layer(conv1b_split1, stride=[1, 2, 2, 1], filter=288, padding='VALID', Batch_norm=True)
+
+                        conv1c_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=256, Batch_norm=True)
+                        conv2c_split1 = inceprv2_builder.Conv2d_layer(conv1c_split1, stride=[1, 2, 2, 1], filter=384, padding='VALID', Batch_norm=True)
+
+                        pool1d_split1 = inceprv2_builder.Pool_layer(input, padding='VALID')
+
+                        concat = inceprv2_builder.Concat([conv3a_split1, conv2b_split1, conv2c_split1, pool1d_split1])
+
+                        return concat
+
+                def inception_resnet_C(input):
+                    with tf.name_scope('Inception_Resnet_C') as scope:
+                        conv1a_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=192, Batch_norm=True)
+                        conv2a_split1 = inceprv2_builder.Conv2d_layer(conv1a_split1, stride=[1, 1, 1, 1], k_size=[1, 3], filter=224, Batch_norm=True)
+                        conv3a_split1 = inceprv2_builder.Conv2d_layer(conv2a_split1, stride=[1, 1, 1, 1], k_size=[3, 1], filter=256, Batch_norm=True)
+
+                        conv1b_split1 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filter=192, Batch_norm=True)
+
+                        concat1 = inceprv2_builder.Concat(conv3a_split1, conv1b_split1)
+
+                        conv2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filter=2048, Batch_norm=True, Activation=False)
+                        conv2_scale = inceprv2_builder.Scale_activations(conv2)
+
+                        residual_out = inceprv2_builder.Residual_connect([input, conv2_scale])
+
+                #MODEL CONSTRUCTION
+
+                #STEM
+                model_stem = stem(input_reshape)
+                #5x INCEPTION RESNET A
+                inception_A1 = inception_resnet_A(model_stem)
+                inception_A2 = inception_resnet_A(inception_A1)
+                inception_A3 = inception_resnet_A(inception_A2)
+                inception_A4 = inception_resnet_A(inception_A3)
+                inception_A5 = inception_resnet_A(inception_A4)
+                #REUCTION A
+                model_reduction_A = reduction_A(inception_A5)
+                #10X INCEPTION RESNET B
+                inception_B1 = inception_resnet_B(model_reduction_A)
+                inception_B2 = inception_resnet_B(inception_B1)
+                inception_B3 = inception_resnet_B(inception_B2)
+                inception_B4 = inception_resnet_B(inception_B3)
+                inception_B5 = inception_resnet_B(inception_B4)
+                inception_B6 = inception_resnet_B(inception_B5)
+                inception_B7 = inception_resnet_B(inception_B6)
+                inception_B8 = inception_resnet_B(inception_B7)
+                inception_B9 = inception_resnet_B(inception_B8)
+                inception_B10 = inception_resnet_B(inception_B9)
+                #REDUCTION B
+                model_reduction_B = reduction_B(inception_B10)
+                #5X INCEPTION RESNET C
+                inception_C1 = inception_resnet_C(model_reduction_B)
+                inception_C2 = inception_resnet_C(inception_C1)
+                inception_C3 = inception_resnet_C(inception_C2)
+                inception_C4 = inception_resnet_C(inception_C3)
+                inception_C5 = inception_resnet_C(inception_C4)
+                #AVERAGE POOLING
+                average_pooling = inceprv2_builder.Pool_layer(inceprv2_builder, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME')
+                #DROPOUT 
+                drop1 = inceprv2_builder.Dropout_layer(average_pooling)
+                #OUTPUT
+                output = inceprv2_builder.FC_layer(drop1, filters=self.kwargs['Classes'], readout=True)
+
+                Inception_resnetv2_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'Train_state' : train_state_placeholder}
+
+                return Inception_resnetv2_dict
 
 
     def Build_vgg19(self):

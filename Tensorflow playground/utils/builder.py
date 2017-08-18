@@ -52,7 +52,7 @@ class Builder(object):
             proto_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
 
             if Activation: #Prepare for Resnet
-                final_conv = tf.nn.relu(proto_conv)
+                final_conv = tf.nn.relu(proto_conv, name='Relu')
 
             if Batch_norm:
                 final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
@@ -139,8 +139,20 @@ class Builder(object):
             return tf.cond(tf.equal(batch_type, True), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
 
     def Concat(self, inputs, axis=3):
-        with tf.name_scope('Concat'):
+        with tf.name_scope('Concat') as scope:
             return tf.concat(inputs, axis=axis)
+
+    def Scale_activations(self, input, scaling_factor=0.2):
+        with tf.name_scope('Scale_Activations') as scope:
+            return tf.multiply(input, scaling_factor)
+
+    def Residual_connect(self, input, Activation=True):
+        with tf.name_scope('Residual_Connection') as scope:
+            layer_sum = tf.add(input[0], input[1])
+            if Activation:
+                layer_sum = tf.nn.relu(layer_sum, name='Relu')
+            return layer_sum
+
 
     def variable_summaries(self, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
