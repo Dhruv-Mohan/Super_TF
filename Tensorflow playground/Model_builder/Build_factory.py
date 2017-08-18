@@ -67,10 +67,10 @@ class Factory(object):
                         
                         concat1 = inceprv2_builder.Concat([conv3a_split1, conv2b_split1, conv1c_split1])
 
-                        conv2 = inceprv2_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filters=384, Batch_norm=True, Activation=False)
+                        conv2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=384, Batch_norm=True, Activation=False)
 
-                        #conv2_scale = inceprv2_builder.Scale_activations(conv2) look into scaling
-                        residual_out = inceprv2_builder.Residual_connect([input, conv2])
+                        conv2_scale = inceprv2_builder.Scale_activations(conv2)
+                        residual_out = inceprv2_builder.Residual_connect([input, conv2_scale])
 
                         return residual_out
 
