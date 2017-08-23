@@ -53,8 +53,8 @@ def main():
 
     #Setting test and train placeholders 
     with tf.name_scope('Control Params'):
-        Alexnet.Set_test_control({'Dropout_prob_ph': 1})
-        Alexnet.Set_train_control({'Dropout_prob_ph': 0.5})
+        Simple_DNN.Set_test_control({'Dropout_prob_ph': 1, 'Train_state': False})
+        Simple_DNN.Set_train_control({'Dropout_prob_ph': 0.8, 'Train_state': True})
 
 
     config = tf.ConfigProto()
