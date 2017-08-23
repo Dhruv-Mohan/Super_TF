@@ -23,6 +23,9 @@ class Factory(object):
                 train_state_placeholder = tf.placeholder(tf.bool, name="Train_State")
                 input_reshape = inceprv2_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
 
+
+
+
                 #Setting control params
                 inceprv2_builder.control_params(Dropout_control=dropout_prob_placeholder, Train_state=train_state_placeholder)
                 
@@ -336,7 +339,8 @@ class Factory(object):
                 drop2 = alexnet_builder.Dropout_layer(fc2)
 
                 output = alexnet_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
-
+                #tf.summary.image('Inputs', input_reshape)
+                #tf.summary.tensor_summary('Outputs', output)
                 Alexnet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'Train_state' : train_state_placeholder}
                 return(Alexnet_dict)
 

@@ -24,7 +24,7 @@ class Builder(object):
         self.Dropout_control = Dropout_control
         self.Train_state = Train_state
 
-    def Weight_variable(self, shape, weight_decay=0):
+    def Weight_variable(self, shape, weight_decay=0.0004):
         with tf.name_scope('Weight') as scope:
             weights = tf.get_variable(name='Weight', shape=shape, initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2(weight_decay))
             #weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
@@ -33,7 +33,7 @@ class Builder(object):
             return weights
 
 
-    def Bias_variable(self, shape):
+    def Bias_variable(self, shape, weight_decay=0.0004):
         with tf.name_scope('Bias') as scope:
             #biases = tf.Variable(tf.constant(0.1, shape=[int(shape)]))
             biases = tf.get_variable(name='Bias', shape=shape, initializer=tf.constant(shape,0.1), trainable=True, regularizer=self.Regloss_l2(weight_decay))
@@ -42,15 +42,15 @@ class Builder(object):
             return biases
 
 
-    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True):
+    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004):
         with tf.name_scope('Conv') as scope:
             if batch_type is None:
                 batch_type=self.Train_state
 
-            bias = self.Bias_variable(filters)
+            bias = self.Bias_variable(filters, weight_decay)
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
-            weights = self.Weight_variable(weight_shape)
+            weights = self.Weight_variable(weight_shape, weight_decay)
             final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
 
             if Activation: #Prepare for Resnet
@@ -78,16 +78,16 @@ class Builder(object):
             return Pool
 
 
-    def FC_layer(self, input, filters=1024, readout=False): #Expects flattened layer
+    def FC_layer(self, input, filters=1024, readout=False, weight_decay=0.0004): #Expects flattened layer
         with tf.name_scope('FC') as scope:
 
             input_shape = input.get_shape().as_list()
             if len(input_shape) > 2:
                 input = tf.reshape(input, [-1, input_shape[1] * input_shape[2] * input_shape[3]])
 
-            bias = self.Bias_variable(filters)
+            bias = self.Bias_variable(filters, weight_decay)
 
-            weight = self.Weight_variable([input.get_shape().as_list()[1], int(filters)])
+            weight = self.Weight_variable([input.get_shape().as_list()[1], int(filters)], weight_decay)
 
             proto_output = tf.matmul(input, weight) + bias;
             #if self.Summary:
