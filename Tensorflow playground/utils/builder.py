@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-
+#TODO:ADD WEIGHT DECAY PARAMS TO CONV AND FC, ADD CONTECT MANAGER FUNC DEFAULTS
 class Builder(object):
     def __init__(self, **kwargs):
         self.Summary = kwargs['Summary']
@@ -24,9 +24,10 @@ class Builder(object):
         self.Dropout_control = Dropout_control
         self.Train_state = Train_state
 
-    def Weight_variable(self, shape):
+    def Weight_variable(self, shape, weight_decay=0):
         with tf.name_scope('Weight') as scope:
-            weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+            weights = tf.get_variable(name='Weight', shape=shape, initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2(weight_decay))
+            #weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
             #if self.Summary:
                 ##self.variable_summaries(weights)
             return weights
@@ -34,7 +35,8 @@ class Builder(object):
 
     def Bias_variable(self, shape):
         with tf.name_scope('Bias') as scope:
-            biases = tf.Variable(tf.constant(0.1, shape=[int(shape)]))
+            #biases = tf.Variable(tf.constant(0.1, shape=[int(shape)]))
+            biases = tf.get_variable(name='Bias', shape=shape, initializer=tf.constant(shape,0.1), trainable=True, regularizer=self.Regloss_l2(weight_decay))
             #if self.Summary:
                 ##self.variable_summaries(biases)
             return biases
@@ -156,6 +158,14 @@ class Builder(object):
                 layer_sum = tf.nn.relu(layer_sum, name='Relu')
             return layer_sum
 
+    def Regloss_l2(self, input, weight=1.0):
+        
+        def regularizer(tensor):
+            with tf.name_scope(scope, 'L2Regularizer', [tensor]):
+                l2_weight = tf.convert_to_tensor(weight, dtype=tensor.dtype.base_dtype, name='weight')
+                return tf.multiply(l2_weight, tf.nn.l2_loss(tensor), name='value')
+      
+        return regularizer
     '''
     def variable_summaries(self, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
