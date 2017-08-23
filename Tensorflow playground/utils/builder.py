@@ -10,7 +10,7 @@ class Builder(object):
         self.Image_height = kwargs['Image_height']
         self.Image_cspace = kwargs['Image_cspace']
         self.Dropout_control = None
-        self.Train_state= None
+        self.State= None
 
 
     def __enter__(self):
@@ -20,9 +20,9 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control= None, Train_state= None):
+    def control_params(self, Dropout_control= None, State= None):
         self.Dropout_control = Dropout_control
-        self.Train_state = Train_state
+        self.State = State
 
     def Weight_variable(self, shape, weight_decay=0.0004):
         with tf.name_scope('Weight') as scope:
@@ -45,7 +45,7 @@ class Builder(object):
     def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004):
         with tf.name_scope('Conv') as scope:
             if batch_type is None:
-                batch_type=self.Train_state
+                batch_type=self.State
 
             bias = self.Bias_variable(filters, weight_decay)
             input_shape = input.get_shape().as_list()[3]
@@ -141,7 +141,7 @@ class Builder(object):
             scale = tf.Variable(tf.ones([input.get_shape()[-1]]))
             beta = tf.Variable(tf.zeros([input.get_shape()[-1]]))
 
-            return tf.cond(tf.equal(batch_type, True), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
+            return tf.cond(tf.equal(batch_type, 'TRAIN'), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
 
     def Concat(self, inputs, axis=3):
         with tf.name_scope('Concat') as scope:

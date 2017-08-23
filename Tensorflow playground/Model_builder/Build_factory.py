@@ -20,14 +20,11 @@ class Factory(object):
                     shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
                 output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                train_state_placeholder = tf.placeholder(tf.bool, name="Train_State")
+                state_placeholder = tf.placeholder(tf.string, name="State")
                 input_reshape = inceprv2_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
 
-
-
-
                 #Setting control params
-                inceprv2_builder.control_params(Dropout_control=dropout_prob_placeholder, Train_state=train_state_placeholder)
+                inceprv2_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
                 
                 #Construct functional building blocks
                 def stem(input):
@@ -182,8 +179,21 @@ class Factory(object):
                 drop1 = inceprv2_builder.Dropout_layer(average_pooling)
                 #OUTPUT
                 output = inceprv2_builder.FC_layer(drop1, filters=self.kwargs['Classes'], readout=True)
+                #LOGIT LOSS
+                softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
 
-                Inception_resnetv2_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'Train_state' : train_state_placeholder}
+                #Adding collections to graph
+                tf.add_to_collection(self.model_name + '_Endpoints', inception_A5)
+                tf.add_to_collection(self.model_name + '_Endpoints', inception_B10)
+                tf.add_to_collection(self.model_name + '_Endpoints', inception_C5)
+                tf.add_to_collection(self.model_name + '_Input_ph', input_placeholder)
+                tf.add_to_collection(self.model_name + '_Output_ph', output_placeholder)
+                tf.add_to_collection(self.model_name + '_Output', output)
+                tf.add_to_collection(self.model_name + '_Dropout_prob_ph', dropout_prob_placeholder)
+                tf.add_to_collection(self.model_name + '_State', state_placeholder)
+                tf.add_to_collection(self.model_name + '_Loss', softmax_logit_loss)
+
+                Inception_resnetv2_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'State' : state_placeholder}
 
                 return Inception_resnetv2_dict
 
@@ -308,12 +318,12 @@ class Factory(object):
                     shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
                 output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                train_state_placeholder = tf.placeholder(tf.bool, name="Train_State")
+                state_placeholder = tf.placeholder(tf.bool, name="State")
 
                 input_reshape = alexnet_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
 
                 #Setting control params
-                alexnet_builder.control_params(Dropout_control=dropout_prob_placeholder, Train_state=train_state_placeholder)
+                alexnet_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
 
                 #FEATURE EXTRACTION
                 conv1 = alexnet_builder.Conv2d_layer(input_reshape, stride=[1, 4, 4, 1], k_size=[11, 11], filters=96, padding='VALID', Batch_norm=True)
@@ -341,7 +351,7 @@ class Factory(object):
                 output = alexnet_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
                 #tf.summary.image('Inputs', input_reshape)
                 #tf.summary.tensor_summary('Outputs', output)
-                Alexnet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'Train_state' : train_state_placeholder}
+                Alexnet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'State' : state_placeholder}
                 return(Alexnet_dict)
 
 
