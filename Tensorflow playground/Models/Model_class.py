@@ -50,20 +50,21 @@ class Model_class(object):
                 correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
             with tf.name_scope('accuracy'):
                 self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
+                tf.summary.scalar('accuracy', self.accuracy)
 
     def Construct_Writers(self, session=None):
         #Get default session
+
+        self.saver = tf.train.Saver()
         if session is None:
             session = tf.get_default_session()
-        self.saver = tf.train.Saver()
-        if self.kwargs['Summary']:
-            self.train_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/train/', session.graph)
-            self.test_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/test/')
-        else:
-            graph_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/train/')
-            graph_writer.add_graph(session.graph)
-            graph_writer.close();
+        #if self.kwargs['Summary']:
+        self.log_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/logs/', session.graph)
+            #self.test_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/test/')
+        #else:
+            #graph_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/train/')
+            #graph_writer.add_graph(session.graph)
+            #graph_writer.close();
 
 
     def Construct_Predict_op(self):
@@ -98,7 +99,7 @@ class Model_class(object):
         return(out)
 
 
-    def Train_Iter(self, iterations, test_iterations, data, restore=True, session=None):
+    def Train_Iter(self, iterations, save_iterations, data, log_iteration=10, restore=True, session=None):
         #Get default session
         if session is None:
             session = tf.get_default_session()
@@ -106,42 +107,39 @@ class Model_class(object):
         if restore:
             self.Try_restore(session)
 
-        if self.kwargs['Summary']:
-            self.merged = tf.summary.merge_all()
+
+        self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         for step in range(iterations):
-            batch = data.next_batch(self.kwargs['Batch_size'])
-            #IO feed dict
-            IO_feed_dict = {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}
-            #Construct train dict
+            print('step %d' %(step + 1))
+            batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
+            IO_feed_dict = {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}            #Construct train dict
             train_feed_dict = {**IO_feed_dict, **self.train_dict}
-            
-            #Test block TODO: Add param for variable test iteration
-            if(step + 1) % test_iterations == 0:
-                #Construst Test dict
-                test_feed_dict = {**IO_feed_dict, **self.test_dict}
-                self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/' + self.Model_name + '.ckpt', global_step=self.global_step)
-                if self.kwargs['Summary']:
-                    summary, train_accuracy = session.run([self.merged, self.accuracy], \
-                        feed_dict=test_feed_dict)
-                    self.test_writer.add_summary(summary, step)
-                else:
-                    train_accuracy = session.run([self.accuracy], \
-                        feed_dict=test_feed_dict)
 
-                print(train_accuracy)
-            print('step %d' %(step))
+
+            #saver block
+            if(step + 1) % save_iterations == 0:
+
+                self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/' + self.Model_name + '.ckpt', global_step=self.global_step)
+
+            #logger block
+            if(step + 1) % log_iteration == 0:
+                test_feed_dict = {**IO_feed_dict, **self.test_dict}               #Construst Test dict
+                summary, train_accuracy, glo_step = session.run([self.merged, self.accuracy, self.global_step], \
+                        feed_dict=test_feed_dict)
+                self.log_writer.add_summary(summary, glo_step)
+
+
+                #print(train_accuracy)
+
+
+
 
             #Train Step
-            if False:
-            #if self.kwargs['Summary']:
-                summary,  _ = session.run([self.merged, self.train_step], \
-                    feed_dict=train_feed_dict)
-                self.train_writer.add_summary(summary, step)
-            else:
-                _ = session.run([self.train_step], \
-                    feed_dict=train_feed_dict)
+
+            _, loss = session.run([self.train_step ,self.loss], feed_dict=train_feed_dict)
+            print (loss)
         coord.request_stop()
         coord.join(threads)
 
