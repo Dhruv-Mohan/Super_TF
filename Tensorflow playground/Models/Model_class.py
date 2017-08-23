@@ -26,7 +26,13 @@ class Model_class(object):
 
 
     def Set_loss(self, params):
-        self.loss = params  #Const loss func
+        loss  = [] #Const loss func
+        loss.append(params)
+        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
+        loss.append(regularization_loss)
+
+        self.loss = tf.add_n(loss)
         if self.kwargs['Summary']:
             tf.summary.scalar('cross_entropy', self.loss)
 
