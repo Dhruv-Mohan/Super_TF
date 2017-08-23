@@ -27,16 +27,16 @@ class Builder(object):
     def Weight_variable(self, shape):
         with tf.name_scope('Weight') as scope:
             weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
-            if self.Summary:
-                self.variable_summaries(weights)
+            #if self.Summary:
+                ##self.variable_summaries(weights)
             return weights
 
 
     def Bias_variable(self, shape):
         with tf.name_scope('Bias') as scope:
             biases = tf.Variable(tf.constant(0.1, shape=[int(shape)]))
-            if self.Summary:
-                self.variable_summaries(biases)
+            #if self.Summary:
+                ##self.variable_summaries(biases)
             return biases
 
 
@@ -58,8 +58,8 @@ class Builder(object):
                 final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
                 #Append bathc norm block
 
-            if self.Summary:
-                tf.summary.histogram('Final_activations', final_conv)
+            #if self.Summary:
+                #tf.summary.histogram('Final_activations', final_conv)
             return final_conv
 
 
@@ -71,8 +71,8 @@ class Builder(object):
             elif pooling_type == 'AVG':
                 Pool = tf.nn.avg_pool(input, ksize=k_size, \
                     strides=stride, padding=padding, name="AVG_POOL")
-            if self.Summary:
-                tf.summary.histogram('Pool_activations', Pool)
+            #if self.Summary:
+                #tf.summary.histogram('Pool_activations', Pool)
             return Pool
 
 
@@ -88,14 +88,14 @@ class Builder(object):
             weight = self.Weight_variable([input.get_shape().as_list()[1], int(filters)])
 
             proto_output = tf.matmul(input, weight) + bias;
-            if self.Summary:
-                tf.summary.histogram('Pre_activations', proto_output)
+            #if self.Summary:
+                #tf.summary.histogram('Pre_activations', proto_output)
             if readout:
                 return(proto_output)
 
             final_output = tf.nn.relu(proto_output)
-            if self.Summary:
-                tf.summary.histogram('Final_activations', final_output)
+            #if self.Summary:
+                #tf.summary.histogram('Final_activations', final_output)
             return(final_output)
 
 
@@ -156,7 +156,7 @@ class Builder(object):
                 layer_sum = tf.nn.relu(layer_sum, name='Relu')
             return layer_sum
 
-
+    '''
     def variable_summaries(self, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
         with tf.name_scope('summaries'):
@@ -168,3 +168,4 @@ class Builder(object):
             tf.summary.scalar('max', tf.reduce_max(var))
             tf.summary.scalar('min', tf.reduce_min(var))
             tf.summary.histogram('histogram', var)
+    '''
