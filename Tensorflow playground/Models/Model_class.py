@@ -30,20 +30,28 @@ class Model_class(object):
 
 
     def Set_loss(self):
-        loss = tf.get_collection(self.Model_name + '_Loss') #Getting losses from the graph
+        with tf.name_scope("Loss"):
+            with tf.name_scope("Logit_Loss"):
+                loss = tf.get_collection(self.Model_name + '_Loss') #Getting losses from the graph
 
-        regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
-        loss.append(regularization_loss)
+            
+            with tf.name_scope("Regularization_Loss"):
+                regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+                regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
+                loss.append(regularization_loss)
 
-        self.loss = tf.add_n(loss)
-        if self.kwargs['Summary']:
-            tf.summary.scalar('cross_entropy', self.loss)
+            self.loss = tf.add_n(loss)
+            if self.kwargs['Summary']:
+                tf.summary.scalar('Total', self.loss)
 
 
     def Set_optimizer(self, params, max_norm=5.0):
         self.optimizer = params #Const optimizer params 
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
+
+        #for gradient,num in enumerate(gradients):
+            #tf.summary.histogram('Gradient_'+str(num), gradient)
+
         clipped_gradients, _ = tf.clip_by_global_norm(gradients,max_norm)
         self.train_step = self.optimizer.apply_gradients(zip(clipped_gradients,tvars), global_step=self.global_step)
         #self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
@@ -130,15 +138,18 @@ class Model_class(object):
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         for step in range(iterations):
-            print('step %d' %(step + 1))
             batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
             IO_feed_dict = {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}            #Construct train dict
             train_feed_dict = {**IO_feed_dict, **self.train_dict}
 
+            #Train Step
+            _, loss = session.run([self.train_step ,self.loss], feed_dict=train_feed_dict)
+            print ('Step: ',step+1,'Loss: ',loss)
+
 
             #saver block
             if(step + 1) % save_iterations == 0:
-
+                print('Saving Checkpoint')
                 self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/' + self.Model_name + '.ckpt', global_step=self.global_step)
 
             #logger block
@@ -149,15 +160,6 @@ class Model_class(object):
                 self.log_writer.add_summary(summary, glo_step)
 
 
-                #print(train_accuracy)
-
-
-
-
-            #Train Step
-
-            _, loss = session.run([self.train_step ,self.loss], feed_dict=train_feed_dict)
-            print (loss)
         coord.request_stop()
         coord.join(threads)
 
