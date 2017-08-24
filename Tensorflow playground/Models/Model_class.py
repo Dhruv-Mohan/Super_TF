@@ -41,10 +41,12 @@ class Model_class(object):
             tf.summary.scalar('cross_entropy', self.loss)
 
 
-    def Set_optimizer(self, params):
+    def Set_optimizer(self, params, max_norm=5.0):
         self.optimizer = params #Const optimizer params 
-        #gradients,_ = self.optimizer.compute_gradients(loss) Add max-norm
-        self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
+        gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
+        clipped_gradients, _ = tf.clip_by_global_norm(gradients,max_norm)
+        self.train_step = self.optimizer.apply_gradients(zip(clipped_gradients,tvars), global_step=self.global_step)
+        #self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
 
 
     def Construct_Model(self):
