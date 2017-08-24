@@ -11,8 +11,7 @@ class Builder(object):
         self.Image_cspace = kwargs['Image_cspace']
         self.Dropout_control = None
         self.State = None
-        self.Conv_count = 0
-        self.FC_count = 0
+
     def __enter__(self):
         return self 
 
@@ -26,10 +25,10 @@ class Builder(object):
 
     def Weight_variable(self, shape, weight_decay=0.0004):
         with tf.name_scope('Weight') as scope:
-            with tf.variable_scope("Weight") as var_scope:
-                weights = tf.get_variable(name='Weight', shape=shape, initializer=tf.random_normal_initializer(), trainable=True, regularizer=self.Regloss_l2(weight_decay), )
-
-                #weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+            ##with tf.variable_scope("Weight") as var_scope:
+            #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
+            weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(weights, weight_decay))
             #if self.Summary:
                 ##self.variable_summaries(weights)
             return weights
@@ -37,9 +36,10 @@ class Builder(object):
 
     def Bias_variable(self, shape, weight_decay=0.0004):
         with tf.name_scope('Bias') as scope:
-            with tf.variable_scope("Bias") as var_scope:
-            #biases = tf.Variable(tf.constant(0.1, shape=[int(shape)]))
-                biases = tf.get_variable(name='Bias', shape=shape, initializer=tf.constant_initializer(0.1) , trainable=True, regularizer=self.Regloss_l2(weight_decay))
+            #with tf.variable_scope("Bias") as var_scope:
+            biases = tf.Variable(tf.constant(0.1, shape=[int(shape)]))
+            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(biases, weight_decay))
+            #biases = tf.get_variable(name='Bias', shape=shape, initializer=tf.constant_initializer(0.1) , trainable=True, regularizer=self.Regloss_l2)
 
                 #if self.Summary:
                 ##self.variable_summaries(biases)
@@ -48,28 +48,23 @@ class Builder(object):
 
     def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004):
         with tf.name_scope('Conv') as scope:
-            with tf.variable_scope('Conv_'+ str(self.Conv_count)):
-                self.Conv_count = self.Conv_count + 1
 
-                if batch_type is None:
-                    batch_type=self.State
+            if batch_type is None:
+                batch_type=self.State
 
-                bias = self.Bias_variable(filters, weight_decay)
-                input_shape = input.get_shape().as_list()[3]
-                weight_shape = k_size + [input_shape, int(filters)]
-                weights = self.Weight_variable(weight_shape, weight_decay)
-                final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
+            bias = self.Bias_variable(filters, weight_decay)
+            input_shape = input.get_shape().as_list()[3]
+            weight_shape = k_size + [input_shape, int(filters)]
+            weights = self.Weight_variable(weight_shape, weight_decay)
+            final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
 
-                if Activation: #Prepare for Resnet
-                    final_conv = tf.nn.relu(final_conv, name='Relu')
+            if Activation: #Prepare for Resnet
+                final_conv = tf.nn.relu(final_conv, name='Relu')
 
-                if Batch_norm:
-                    final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
-                    #Append bathc norm block
+            if Batch_norm:
+                final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
 
-                #if self.Summary:
-                    #tf.summary.histogram('Final_activations', final_conv)
-                return final_conv
+            return final_conv
 
 
     def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1], padding='SAME', pooling_type='MAX'):
@@ -87,27 +82,25 @@ class Builder(object):
 
     def FC_layer(self, input, filters=1024, readout=False, weight_decay=0.0004): #Expects flattened layer
         with tf.name_scope('FC') as scope:
-            with tf.variable_scope('FC_'+ str(self.FC_count)):
-                self.FC_count = self.FC_count + 1
-            
-                input_shape = input.get_shape().as_list()
-                if len(input_shape) > 2:
-                    input = tf.reshape(input, [-1, input_shape[1] * input_shape[2] * input_shape[3]])
 
-                bias = self.Bias_variable(filters, weight_decay)
+            input_shape = input.get_shape().as_list()
+            if len(input_shape) > 2:
+                input = tf.reshape(input, [-1, input_shape[1] * input_shape[2] * input_shape[3]])
 
-                weight = self.Weight_variable([input.get_shape().as_list()[1], int(filters)], weight_decay)
+            bias = self.Bias_variable(filters, weight_decay)
 
-                proto_output = tf.matmul(input, weight) + bias;
-                #if self.Summary:
-                    #tf.summary.histogram('Pre_activations', proto_output)
-                if readout:
-                    return(proto_output)
+            weight = self.Weight_variable([input.get_shape().as_list()[1], int(filters)], weight_decay)
 
-                final_output = tf.nn.relu(proto_output)
-                #if self.Summary:
-                    #tf.summary.histogram('Final_activations', final_output)
-                return(final_output)
+            proto_output = tf.matmul(input, weight) + bias;
+            #if self.Summary:
+            #tf.summary.histogram('Pre_activations', proto_output)
+            if readout:
+                return(proto_output)
+
+            final_output = tf.nn.relu(proto_output)
+            #if self.Summary:
+                #tf.summary.histogram('Final_activations', final_output)
+            return(final_output)
 
 
     def Reshape_input(self, input, width=28, height=28, colorspace=1):
@@ -144,17 +137,17 @@ class Builder(object):
     def Batch_norm(self, input, *, batch_type, decay=0.99, epsilon=1e-3):
         ''' https://r2rt.com/implementing-batch-normalization-in-tensorflow.html for an explanation of the code'''
         with tf.name_scope('Batch_norm') as scope:
-            with tf.variable_scope("Batch_norm") as var_scope:
-                #pop_mean = tf.Variable(tf.zeros([input.get_shape()[-1]]), trainable=False)
-                #pop_var = tf.Variable(tf.ones([input.get_shape()[-1]]), trainable=False)
-                pop_mean = tf.get_variable(name="pop_mean", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer(), trainable=False)
-                pop_var = tf.get_variable(name="pop_var", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer(), trainable=False)
+            #with tf.variable_scope("Batch_norm") as var_scope:
+            pop_mean = tf.Variable(tf.zeros([input.get_shape()[-1]]), trainable=False)
+            pop_var = tf.Variable(tf.ones([input.get_shape()[-1]]), trainable=False)
+                #pop_mean = tf.get_variable(name="pop_mean", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer(), trainable=False)
+                #pop_var = tf.get_variable(name="pop_var", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer(), trainable=False)
                 
-                scale = tf.get_variable(name="Bn_scale", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer())
-                beta = tf.get_variable(name="Bn_beta", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer())
-                var_scope.reuse_variables()
-                #scale = tf.Variable(tf.ones([input.get_shape()[-1]]))
-                #beta = tf.Variable(tf.zeros([input.get_shape()[-1]]))
+                #scale = tf.get_variable(name="Bn_scale", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer())
+                #beta = tf.get_variable(name="Bn_beta", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer())
+                #var_scope.reuse_variables()
+            scale = tf.Variable(tf.ones([input.get_shape()[-1]]))
+            beta = tf.Variable(tf.zeros([input.get_shape()[-1]]))
 
             return tf.cond(tf.equal(batch_type, 'TRAIN'), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
 
@@ -174,13 +167,11 @@ class Builder(object):
             return layer_sum
 
     def Regloss_l2(self, input, weight=1.0):
-        
-        def regularizer(tensor):
-            with tf.name_scope('L2Regularizer'):
-                l2_weight = tf.convert_to_tensor(weight, dtype=tensor.dtype.base_dtype, name='weight')
-                return tf.multiply(l2_weight, tf.nn.l2_loss(tensor), name='value')
+        with tf.name_scope('L2Regularizer'):
+            l2_weight = tf.convert_to_tensor(weight, dtype=input.dtype.base_dtype, name='weight')
+            return tf.multiply(l2_weight, tf.nn.l2_loss(input), name='value')
       
-        return regularizer
+
     '''
     def variable_summaries(self, var):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""

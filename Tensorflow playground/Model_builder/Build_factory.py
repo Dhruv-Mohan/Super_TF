@@ -123,7 +123,6 @@ class Factory(object):
                         pool1d_split1 = inceprv2_builder.Pool_layer(input, padding='VALID')
 
                         concat = inceprv2_builder.Concat([conv3a_split1, conv2b_split1, conv2c_split1, pool1d_split1])
-
                         return concat
 
                 def inception_resnet_C(input):
@@ -194,7 +193,9 @@ class Factory(object):
                 tf.add_to_collection(self.model_name + '_Loss', softmax_logit_loss)
 
                 #Inception_resnetv2_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'State' : state_placeholder}
-
+                print('retursg')
+                print(dropout_prob_placeholder)
+                return dropout_prob_placeholder
                 #return Inception_resnetv2_dict
 
 
