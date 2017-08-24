@@ -13,7 +13,7 @@ class Factory(object):
         return (eval('self.Build_'+self.model_name+'()'))
     
 
-    def Build_Incpetion_Resnet_v2(self):
+    def Build_Inception_Resnet_v2(self):
         with tf.name_scope('Inception_Resnet_v2_model'):
             with Builder(**self.kwargs) as inceprv2_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
@@ -193,9 +193,9 @@ class Factory(object):
                 tf.add_to_collection(self.model_name + '_State', state_placeholder)
                 tf.add_to_collection(self.model_name + '_Loss', softmax_logit_loss)
 
-                Inception_resnetv2_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'State' : state_placeholder}
+                #Inception_resnetv2_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'State' : state_placeholder}
 
-                return Inception_resnetv2_dict
+                #return Inception_resnetv2_dict
 
 
     def Build_vgg19(self):

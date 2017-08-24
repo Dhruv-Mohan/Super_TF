@@ -25,9 +25,10 @@ class Model_class(object):
             self.train_dict[self.model_dict[key]] = value
 
 
-    def Set_loss(self, params):
-        loss  = [] #Const loss func
-        loss.append(params)
+    def Set_loss(self):
+        loss = tf.get_collection(self.Model_name + '_Loss') #Getting losses from the graph
+        if len(loss) > 1:
+            loss = tf.add_n(loss)
         regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
         regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
         loss.append(regularization_loss)
@@ -46,8 +47,12 @@ class Model_class(object):
     def Construct_Model(self):
         self.model_dict = Factory(**self.kwargs).get_model()
         print('Model Placeholders')
-        for key, value in self.model_dict.items():
-            print(key)
+        print(tf.get_default_graph().get_all_collection_keys)
+        self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')
+        self.model_dict['Input_ph'] = tf.get_collection(self.Model_name + '_Input_ph')
+        self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')
+        self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')
+        self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')
 
 
     def Construct_Accuracy_op(self):
