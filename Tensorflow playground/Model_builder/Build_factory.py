@@ -179,7 +179,8 @@ class Factory(object):
                 #OUTPUT
                 output = inceprv2_builder.FC_layer(drop1, filters=self.kwargs['Classes'], readout=True)
                 #LOGIT LOSS
-                softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
+                with tf.name_scope('Cross_entropy_loss'):
+                    softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
 
                 #Adding collections to graph
                 tf.add_to_collection(self.model_name + '_Endpoints', inception_A5)

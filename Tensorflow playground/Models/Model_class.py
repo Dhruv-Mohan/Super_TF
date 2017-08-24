@@ -45,8 +45,11 @@ class Model_class(object):
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, params, max_norm=5.0):
-        self.optimizer = params #Const optimizer params 
+    def Set_optimizer(self, max_norm=5.0, starter_learning_rate=0.005, decay_steps=500, decay_rate=0.96):
+        #TODO: CHANGE TO OPTIMIZER FACTORY
+        learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=False)
+        tf.summary.scalar('Learning_rate', learning_rate)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate)
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
 
         #for gradient,num in enumerate(gradients):
