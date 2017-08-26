@@ -45,7 +45,7 @@ class Model_class(object):
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, max_norm=5.0, starter_learning_rate=0.005, decay_steps=500, decay_rate=0.96):
+    def Set_optimizer(self, max_norm=5.0, starter_learning_rate=0.005, decay_steps=1500, decay_rate=0.56):
         #TODO: CHANGE TO OPTIMIZER FACTORY
         learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=False)
         tf.summary.scalar('Learning_rate', learning_rate)
@@ -113,7 +113,6 @@ class Model_class(object):
         else:
             print('Ckpt_not_found')
 
-
     def Predict(self, input_data, session=None):
         #Get default session
         if session is None:
@@ -141,6 +140,7 @@ class Model_class(object):
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         for step in range(iterations):
+            step = session.run([self.global_step])[0]
             batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
             IO_feed_dict = {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}            #Construct train dict
             train_feed_dict = {**IO_feed_dict, **self.train_dict}
