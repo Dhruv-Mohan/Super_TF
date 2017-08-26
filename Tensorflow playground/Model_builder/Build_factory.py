@@ -69,7 +69,7 @@ class Factory(object):
 
                         conv2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=384, Batch_norm=True, Activation=False)
 
-                        conv2_scale = inceprv2_builder.Scale_activations(conv2)
+                        conv2_scale = inceprv2_builder.Scale_activations(conv2,scaling_factor = 1)
                         residual_out = inceprv2_builder.Residual_connect([input, conv2_scale])
 
                         return residual_out
@@ -102,7 +102,7 @@ class Factory(object):
                         concat1 = inceprv2_builder.Concat([conv3a_split1, conv1b_split1])
 
                         conv2 = inceprv2_builder.Conv2d_layer(concat1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1152, Batch_norm=True, Activation=False) #paper discrepancy filter = 1154
-                        conv2_scale = inceprv2_builder.Scale_activations(conv2)
+                        conv2_scale = inceprv2_builder.Scale_activations(conv2, scaling_factor=0.4)
 
                         residual_out = inceprv2_builder.Residual_connect([input, conv2_scale])
 
