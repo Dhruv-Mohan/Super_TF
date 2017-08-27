@@ -1,5 +1,6 @@
 from utils.Dataset_writer import Dataset_writer
 from Dataset_IO.Dataset_conifg_classification import Dataset_conifg_classification
+import Dataset_IO.Dataset_classification_pb2 as proto
 import tensorflow as tf
 import os
 import random
@@ -11,12 +12,14 @@ class label_helper(object):
     def __init__(self, image_path=None, image_data=None):
         self.image_path=image_path
         self.image_data=image_data
+        _, self.image_name=os.path.split(image_path)
 
 
 class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer):
     """Implementation of Dataset writer for classification"""
 
-    def __init__(self, Dataset_filename, image_shape=[]):
+    def __init__(self, Dataset_filename, image_shape=[], dataset_name='defaultname'):
+        self.dataset_name = dataset_name
         with tf.name_scope('Dataset_Classification_Writer') as scope:
             self.image_shape = image_shape
             super().__init__()
@@ -26,8 +29,13 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
                 self._Width_handle  : self._int64_feature(image_shape[1]),\
                 self._Depth_handle  : self._int64_feature(image_shape[2]),\
                 self._Label_handle  : None,\
-                self._Image_handle  : None}
-
+                self._Image_handle  : None,\
+                self._Image_name    : None}
+            self.mean_header_proto = proto.Image_set()
+            self.mean_headers = self.mean_header_proto.Data_headers()
+            self.mean_headers.image_width = image_shape[1]
+            self.mean_headers.image_height = image_shape[0]
+            self.mean_headers.image_depth = image_shape[2]
 
     def prune_data(self, image):
         _, ext = os.path.splitext(image)
@@ -70,6 +78,9 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
             self.__file_dict_constructor(file_dict)
 
 
+
+
+
     def write_record(self, sess=None):
         with tf.name_scope('Dataset_Classification_Writer') as scope:
             if sess is None:
@@ -79,16 +90,32 @@ class Dataset_writer_classification(Dataset_conifg_classification,Dataset_writer
 
             im_pth = tf.placeholder(tf.string)
             image_raw = tf.read_file(im_pth)
+            image_pix = tf.image.convert_image_dtype(tf.image.decode_image(image_raw), tf.float32)
+            dataset_mean = tf.Variable(tf.zeros(shape=[self.image_shape[0], self.image_shape[1], self.image_shape[2]]))
             total_images = len(self.shuffled_images)
+            mean_assign = tf.assign(dataset_mean, dataset_mean + image_pix/total_images)
             print('\t\t Constructing Database')
-
+            self.mean_headers.image_count = total_images
             for index , image_container in enumerate(self.shuffled_images):
                 printProgressBar(index+1, total_images)
-                im_rw = self.sess.run([image_raw],feed_dict={im_pth: image_container.image_path})
+                im_rw = self.sess.run([image_raw, mean_assign],feed_dict={im_pth: image_container.image_path})
                 self.Param_dict[self._Label_handle] = self._int64_feature(image_container.image_data)
                 self.Param_dict[self._Image_handle] = self._bytes_feature(im_rw[0])
+                self.Param_dict[self._Image_name]   = image_container.image_name
                 example = tf.train.Example(features=tf.train.Features(feature=self.Param_dict))
                 self._Writer.write(example.SerializeToString())
+                #ADD TO MEAN IMAGE
+
+            #ENCODE MEAN AND STORE IT
+            encoded_mean = tf.image.encode_png(dataset_mean)
+            self.mean_header_proto.mean_data = encoded_mean.eval()
+            
+            with open(self.datset_name+'_mean.proto','wb') as mean_proto_file:
+                mean_proto_file.write(self.mean_header_proto.SerializeToString())
+
+
+            tf.write_file(self.datset_name+'_mean.png', encoded_mean.eval())
+
             self._Writer.close()
 
 
