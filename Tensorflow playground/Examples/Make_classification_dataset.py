@@ -5,8 +5,8 @@ from Dataset_IO.Dataset_writer_classification import Dataset_writer_classificati
 _IMAGE_WIDTH_       = 299
 _IMAGE_HEIGHT_      = 299
 _IMAGE_CSPACE_      = 1
-_DATA_PATH_         = 'E:/Tftestdata' #REPLACE WITH PATH TO FOLDER CONTAINING IMAGES
-_DATASET_NAME_      = 'Dummyset.tfrecords'
+_DATA_PATH_         = 'E:/DATA8c' #REPLACE WITH PATH TO FOLDER CONTAINING IMAGES
+_DATASET_NAME_      = 'Avctet.tfrecords'
 
 '''
 A classification dataset writer must be given the path to a folder containing the dataset. 
@@ -34,7 +34,8 @@ def main():
     #Writer accepts path of the data as described above or a dictionary with labels as keys and a list of file names of the corresponding lable as values
     dummy_writer.filename_constructor(filename_path=_DATA_PATH_)
 
-    with tf.Session() as sess:
+    with tf.Session() as session:
+        session.run(tf.global_variables_initializer())
         dummy_writer.write_record()
 
 

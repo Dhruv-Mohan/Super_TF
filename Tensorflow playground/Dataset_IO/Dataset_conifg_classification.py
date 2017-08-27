@@ -10,6 +10,7 @@ class Dataset_conifg_classification(object):
         self._Height_handle    = 'height'
         self._Width_handle     = 'width'
         self._Depth_handle     = 'depth'
+        self._Image_name       = 'image_name'
         self._Feature_dict     =  {\
             self._Label_handle  : tf.FixedLenFeature([], tf.int64),\
             self._Image_handle  : tf.FixedLenFeature([], tf.string),\
