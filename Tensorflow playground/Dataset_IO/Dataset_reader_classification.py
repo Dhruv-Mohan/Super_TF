@@ -3,9 +3,9 @@ from Dataset_IO.Dataset_conifg_classification import Dataset_conifg_classificati
 import Dataset_IO.Dataset_classification_pb2 as proto
 import tensorflow as tf
 import os
-import numpy
-numpy.set_printoptions(threshold=numpy.nan)
 
+
+#TODO: ADD TFRECORDS AND MEANPROTO READING CHECKS
 class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification):
     """Implementation of Dataset reader for classification"""
 
