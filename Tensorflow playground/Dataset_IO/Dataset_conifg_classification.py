@@ -15,4 +15,5 @@ class Dataset_conifg_classification(object):
             self._Image_handle  : tf.FixedLenFeature([], tf.string),\
             self._Height_handle : tf.FixedLenFeature([], tf.int64),\
             self._Width_handle  : tf.FixedLenFeature([], tf.int64),\
-            self._Depth_handle  : tf.FixedLenFeature([], tf.int64)}
+            self._Depth_handle  : tf.FixedLenFeature([], tf.int64),\
+            self._Image_name    : tf.FixedLenFeature([], tf.string)}
