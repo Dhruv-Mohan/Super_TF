@@ -1,27 +1,48 @@
 from utils.Dataset_reader import Dataset_reader
 from Dataset_IO.Dataset_conifg_classification import Dataset_conifg_classification
+import Dataset_IO.Dataset_classification_pb2 as proto
 import tensorflow as tf
-
+import os
+import numpy
+numpy.set_printoptions(threshold=numpy.nan)
 
 class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification):
     """Implementation of Dataset reader for classification"""
 
 
-    def __init__(self, filename=None, epochs=100, image_shape=[], num_classes=10):
+    def __init__(self, filename=None, epochs=100, num_classes=18):
 
         super().__init__()
         with tf.name_scope('Dataset_Classification_Reader') as scope:
             self.batch_size = tf.placeholder(tf.int32, name='Dataset_batch_size')
-            self.image_shape =  image_shape
             self.num_classes = num_classes
             self.open_dataset(filename=filename, epochs=epochs)
+            self.mean_header_proto = proto.Image_set()
+            dataset_path, dataset_name = os.path.split(filename)
+            common_name, _ = os.path.splitext(dataset_name)
+            mean_file_path = os.path.join(dataset_path,common_name +'_mean.proto')
+            
+            with open(mean_file_path,"rb") as mean_header_file:
+                self.mean_header_proto.ParseFromString(mean_header_file.read())
+
+            self.image_shape = [self.mean_header_proto.Image_headers.image_height, self.mean_header_proto.Image_headers.image_width, self.mean_header_proto.Image_headers.image_depth]
+            mean_image_data = self.mean_header_proto.mean_data
+
+
+            self.mean_image = tf.image.convert_image_dtype(tf.image.decode_image(mean_image_data), tf.float32)
+            self.mean_image.set_shape(self.image_shape)
             self.images , self.one_hot_labels = self.batch_inputs()
+
+
+
 
 
     def single_read(self):
         features = tf.parse_single_example(self.serialized_example, features=self._Feature_dict)
         image = tf.image.decode_image(features[self._Image_handle])
         image.set_shape(self.image_shape)
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        image = image - self.mean_image
         return image , features[self._Label_handle]
 
 
