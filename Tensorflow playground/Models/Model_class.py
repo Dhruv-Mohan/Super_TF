@@ -49,7 +49,7 @@ class Model_class(object):
         #TODO: CHANGE TO OPTIMIZER FACTORY
         learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=False)
         tf.summary.scalar('Learning_rate', learning_rate)
-        self.optimizer = tf.train.AdamOptimizer(learning_rate)
+        self.optimizer = tf.train.AdamOptimizer(0.00001)
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
 
         #for gradient,num in enumerate(gradients):
@@ -71,15 +71,16 @@ class Model_class(object):
         self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
         self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
         self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
-
+        self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
 
     def Construct_Accuracy_op(self):
         with tf.name_scope('accuracy'):
-            with tf.name_scope('correct_prediction'):
-                correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
-            with tf.name_scope('accuracy'):
-                self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-                tf.summary.scalar('accuracy', self.accuracy)
+            correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
+            false_images = tf.boolean_mask(self.model_dict['Reshaped_input'], tf.logical_not(correct_prediction))
+            tf.summary.image(name='False images', tensor=false_images)
+            self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            tf.summary.scalar('accuracy', self.accuracy)
+            #tf.cond(self.accuracy > 0.92, lambda: tf.summary.image(name='False images', tensor=false_images), lambda: tf.summary.tensor_summary(name='correct_predictions', tensor=correct_prediction))
 
     def Construct_Writers(self, session=None):
         #Get default session
