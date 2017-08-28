@@ -54,7 +54,7 @@ class Factory(object):
 
                         return concat
 
-                def incep_block35(input):
+                def incep_block35(input, Activation=True, scale=1.0):
                     with tf.name_scope('Block35'):
                         conv1a_split1 = inceprv2a_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filters=32, Batch_norm=True)
 
@@ -67,13 +67,14 @@ class Factory(object):
 
                         concat = inceprv2a_builder.Concat([conv1a_split1, conv2b_split1, conv3c_split1])
 
-                        conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=True)
-                        conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=0.17)
+                        conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=False, Activation=False)
+                        conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=scale)
                         residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale])
-
+                        if Activation is True:
+                            residual_out = inceprv2a_builder.Relu(residual_out)
                         return residual_out
 
-                def incep_block17(input):
+                def incep_block17(input, Activation=True, scale=1.0):
                     with tf.name_scope('Block17'):
                         conv1a_split1 = inceprv2a_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filters=192, Batch_norm=True)
 
@@ -83,13 +84,15 @@ class Factory(object):
 
                         concat = inceprv2a_builder.Concat([conv1a_split1, conv3b_split1])
 
-                        conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=True)
-                        conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=0.1)
+                        conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=False, Activation=False)
+                        conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=scale)
                         residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale])
 
+                        if Activation is True:
+                            residual_out = inceprv2a_builder.Relu(residual_out)
                         return residual_out
 
-                def incep_block8(input):
+                def incep_block8(input, Activation=True, scale=1.0):
                     with tf.name_scope('Block8'):
                         conv1a_split1 = inceprv2a_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filters=192, Batch_norm=True)
 
@@ -99,10 +102,11 @@ class Factory(object):
 
                         concat = inceprv2a_builder.Concat([conv1a_split1, conv3b_split1])
 
-                        conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=True)
-                        conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=0.2)
+                        conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=False, Activation=False)
+                        conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=scale) #Last layer has no activations, recheck with implementation
                         residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale])
-
+                        if Activation is True:
+                            residual_out = inceprv2a_builder.Relu(residual_out)
                         return residual_out
 
                 def ReductionA(input):
@@ -141,16 +145,17 @@ class Factory(object):
                 Block_35 = stem(input_reshape)
                 #INCEPTION 35x35
                 for index in range(10):
-                    Block_35 = incep_block35(Block_35)
+                    Block_35 = incep_block35(Block_35, scale=0.17)
                 #Reduction 35->17
                 Block_17 = ReductionA(Block_35)
                 #INCEPTION 17x17
                 for index in range(20):
-                    Block_17 = incep_block17(Block_17)
+                    Block_17 = incep_block17(Block_17, scale=0.1)
                 #Reduction 17->8
                 Block_8 = ReductionB(Block_17)
-                for index in range(10):
-                    Block_8 = incep_block8(Block_8)
+                for index in range(9):
+                    Block_8 = incep_block8(Block_8, scale=0.2)
+                Block_8 = incep_block8(Block_8, False)
                 #Normal Logits
                 model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1536, Batch_norm=True)
                 model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')

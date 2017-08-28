@@ -45,6 +45,8 @@ class Builder(object):
                 ##self.variable_summaries(biases)
             return biases
 
+    def Relu(self, input):
+        return tf.nn.relu(input, name='Relu')
 
     def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004):
         with tf.name_scope('Conv') as scope:
@@ -59,7 +61,7 @@ class Builder(object):
             final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
 
             if Activation: #Prepare for Resnet
-                final_conv = tf.nn.relu(final_conv, name='Relu')
+                final_conv = self.Relu(final_conv)
 
             if Batch_norm:
                 final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
