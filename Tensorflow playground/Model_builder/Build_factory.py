@@ -31,12 +31,12 @@ class Factory(object):
                         conv1 = inceprv2a_builder.Conv2d_layer(input, stride=[1, 2, 2, 1], filters=32, Batch_norm=True)
                         conv2 = inceprv2a_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, Batch_norm=True, padding='VALID')
                         conv3 = inceprv2a_builder.Conv2d_layer(conv2, stride=[1, 1, 1, 1], k_size=[3, 3], filters=64, Batch_norm=True)
-                        pool1 = inceprv2a_builder.Pool_layer(conv3, stride=[1, 2, 2, 1], k_size=[3 ,3], padding='VALID')
+                        pool1 = inceprv2a_builder.Pool_layer(conv3, stride=[1, 2, 2, 1], k_size=[1, 3 ,3, 1], padding='VALID')
 
                         conv4 = inceprv2a_builder.Conv2d_layer(pool1, stride=[1, 1, 1, 1], filters=80, Batch_norm=True)
                         conv5 = inceprv2a_builder.Conv2d_layer(conv4, stride=[1, 1, 1, 1], k_size=[3, 3], filters=192, Batch_norm=True, padding='VALID')
 
-                        pool2 = inceprv2a_builder.Pool_layer(conv5, stride=[1, 2, 2, 1], k_size=[3 ,3], padding='VALID')
+                        pool2 = inceprv2a_builder.Pool_layer(conv5, stride=[1, 2, 2, 1], k_size=[1, 3 ,3, 1], padding='VALID')
 
                         conv1a_split1 = inceprv2a_builder.Conv2d_layer(pool2, stride=[1, 1, 1, 1], filters=96, Batch_norm=True)
 
@@ -47,7 +47,7 @@ class Factory(object):
                         conv2c_split1 = inceprv2a_builder.Conv2d_layer(conv1c_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=96, Batch_norm=True)
                         conv3c_split1 = inceprv2a_builder.Conv2d_layer(conv2c_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=96, Batch_norm=True)
 
-                        avgpool1d_split1 = inceprv2a_builder.Pool_layer(input, k_size=[3, 3], stride=[1, 1, 1, 1], pooling_type='AVG')
+                        avgpool1d_split1 = inceprv2a_builder.Pool_layer(pool2, k_size=[1, 3, 3, 1], stride=[1, 1, 1, 1], pooling_type='AVG')
                         conv1d_split1 = inceprv2a_builder.Conv2d_layer(avgpool1d_split1, k_size=[1, 1], filters=64, Batch_norm=True)
 
                         concat = inceprv2a_builder.Concat([conv1a_split1, conv2b_split1, conv3c_split1, conv1d_split1])
@@ -69,9 +69,8 @@ class Factory(object):
 
                         conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=False, Activation=False)
                         conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=scale)
-                        residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale])
-                        if Activation is True:
-                            residual_out = inceprv2a_builder.Relu(residual_out)
+                        residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale], Activation=Activation)
+
                         return residual_out
 
                 def incep_block17(input, Activation=True, scale=1.0):
@@ -86,10 +85,8 @@ class Factory(object):
 
                         conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=False, Activation=False)
                         conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=scale)
-                        residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale])
+                        residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale], Activation=Activation)
 
-                        if Activation is True:
-                            residual_out = inceprv2a_builder.Relu(residual_out)
                         return residual_out
 
                 def incep_block8(input, Activation=True, scale=1.0):
@@ -104,9 +101,8 @@ class Factory(object):
 
                         conv2 = inceprv2a_builder.Conv2d_layer(concat, stride=[1, 1, 1, 1], k_size=[1, 1], filters=input.get_shape()[3], Batch_norm=False, Activation=False)
                         conv2_scale = inceprv2a_builder.Scale_activations(conv2,scaling_factor=scale) #Last layer has no activations, recheck with implementation
-                        residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale])
-                        if Activation is True:
-                            residual_out = inceprv2a_builder.Relu(residual_out)
+                        residual_out = inceprv2a_builder.Residual_connect([input, conv2_scale], Activation=Activation)
+
                         return residual_out
 
                 def ReductionA(input):
@@ -117,7 +113,7 @@ class Factory(object):
                         conv2b_split1 = inceprv2a_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=256, Batch_norm=True)
                         conv3b_split1 = inceprv2a_builder.Conv2d_layer(conv2b_split1, stride=[1, 2, 2, 1], k_size=[3, 3], filters=384, Batch_norm=True, padding='VALID')
 
-                        pool1c_split1 = inceprv2a_builder.Pool_layer(input, stride=[1, 2, 2, 1], k_size=[3, 3], padding='VALID')
+                        pool1c_split1 = inceprv2a_builder.Pool_layer(input, stride=[1, 2, 2, 1], k_size=[1, 3, 3, 1], padding='VALID')
 
                         concat = inceprv2a_builder.Concat([conv1a_split1, conv3b_split1, pool1c_split1])
                         
@@ -134,7 +130,7 @@ class Factory(object):
                         conv2c_split1 = inceprv2a_builder.Conv2d_layer(conv1c_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=288, Batch_norm=True)
                         conv3c_split1 = inceprv2a_builder.Conv2d_layer(conv2c_split1, stride=[1, 2, 2, 1], k_size=[3, 3], filters=320, Batch_norm=True, padding='VALID')
 
-                        pool1d_split1 = inceprv2a_builder.Pool_layer(input, stride=[1, 2, 2, 1], k_size=[3, 3], padding='VALID')
+                        pool1d_split1 = inceprv2a_builder.Pool_layer(input, stride=[1, 2, 2, 1], k_size=[1, 3, 3, 1], padding='VALID')
 
                         concat = inceprv2a_builder.Concat([conv2a_split1, conv2b_split1, conv3c_split1, pool1d_split1])
                         return concat
@@ -157,15 +153,17 @@ class Factory(object):
                     Block_8 = incep_block8(Block_8, scale=0.2)
                 Block_8 = incep_block8(Block_8, False)
                 #Normal Logits
-                model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1536, Batch_norm=True)
-                model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')
-                drop1 = inceprv2a_builder.Dropout_layer(model_avg_pool)
-                output = inceprv2a_builder.FC_layer(drop1, filters=self.kwargs['Classes'], readout=True)
+                with tf.name_scope('Logits'):
+                    model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1536, Batch_norm=True)
+                    model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')
+                    drop1 = inceprv2a_builder.Dropout_layer(model_avg_pool)
+                    output = inceprv2a_builder.FC_layer(drop1, filters=self.kwargs['Classes'], readout=True)
                 #AuxLogits
-                model_aux_avg_pool = inceprv2a_builder.Pool_layer(Block_17, k_size=[1, 5, 5, 1], stride=[1, 3, 3, 1], padding='VALID', pooling_type='AVG')
-                model_aux_conv1 = inceprv2a_builder.Conv2d_layer(model_aux_avg_pool, k_size=[1, 1], stride=[1, 1, 1, 1], filters=128, Batch_norm=True)
-                model_aux_conv2 = inceprv2a_builder.Conv2d_layer(model_aux_conv1, k_size=[5, 5], stride=[1, 1, 1, 1], padding='VALID', filters=768, Batch_norm=True)
-                model_aux_logits = inceprv2a_builder.FC_layer(model_aux_conv2, filters=self.kwargs['Classes'], readout=True)
+                with tf.name_scope('Auxlogits'):
+                    model_aux_avg_pool = inceprv2a_builder.Pool_layer(Block_17, k_size=[1, 5, 5, 1], stride=[1, 3, 3, 1], padding='VALID', pooling_type='AVG')
+                    model_aux_conv1 = inceprv2a_builder.Conv2d_layer(model_aux_avg_pool, k_size=[1, 1], stride=[1, 1, 1, 1], filters=128, Batch_norm=True)
+                    model_aux_conv2 = inceprv2a_builder.Conv2d_layer(model_aux_conv1, k_size=[5, 5], stride=[1, 1, 1, 1], padding='VALID', filters=768, Batch_norm=True)
+                    model_aux_logits = inceprv2a_builder.FC_layer(model_aux_conv2, filters=self.kwargs['Classes'], readout=True)
 
                 #Logit Loss
                 with tf.name_scope('Cross_entropy_loss'):
