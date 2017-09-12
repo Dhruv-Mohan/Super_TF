@@ -27,18 +27,20 @@ class Builder(object):
         with tf.name_scope('Weight') as scope:
             ##with tf.variable_scope("Weight") as var_scope:
             #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
-            weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+            initi = tf.contrib.layers.xavier_initializer()
+            weights = tf.Variable(initi(shape))
+            #weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(weights, weight_decay))
             #if self.Summary:
                 ##self.variable_summaries(weights)
             return weights
 
 
-    def Bias_variable(self, shape, weight_decay=0.0004):
+    def Bias_variable(self, shape, weight_decay=0.04):
         with tf.name_scope('Bias') as scope:
             #with tf.variable_scope("Bias") as var_scope:
-            biases = tf.Variable(tf.constant(0.1, shape=[int(shape)]))
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(biases, weight_decay))
+            biases = tf.Variable(tf.constant(0.0, shape=[int(shape)]))
+            #tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(biases, weight_decay))
             #biases = tf.get_variable(name='Bias', shape=shape, initializer=tf.constant_initializer(0.1) , trainable=True, regularizer=self.Regloss_l2)
 
                 #if self.Summary:
@@ -136,7 +138,7 @@ class Builder(object):
             return tf.nn.batch_normalization(input, pop_mean, pop_var, beta, scale, epsilon, name="BN_TEST")
 
 
-    def Batch_norm(self, input, *, batch_type, decay=0.99, epsilon=1e-3):
+    def Batch_norm(self, input, *, batch_type, decay=0.9997, epsilon=1e-3):
         ''' https://r2rt.com/implementing-batch-normalization-in-tensorflow.html for an explanation of the code'''
         with tf.name_scope('Batch_norm') as scope:
             #with tf.variable_scope("Batch_norm") as var_scope:

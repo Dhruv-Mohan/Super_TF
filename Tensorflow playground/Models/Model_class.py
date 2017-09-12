@@ -18,9 +18,6 @@ class Model_class(object):
 
     def Set_test_control(self, control_placeholders_dict):
         for key, value in control_placeholders_dict.items():
-            print(key)
-            print(value)
-            print(self.model_dict[key])
             self.test_dict[self.model_dict[key]] = value
 
 
@@ -39,23 +36,34 @@ class Model_class(object):
                 regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
                 regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
                 loss.append(regularization_loss)
-
+            
             self.loss = tf.add_n(loss)
             if self.kwargs['Summary']:
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, max_norm=5.0, starter_learning_rate=0.005, decay_steps=1500, decay_rate=0.56):
+    def Set_optimizer(self, max_norm=0.0001, starter_learning_rate=0.005, decay_steps=5000, decay_rate=0.56): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
-        learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=False)
+        learning_rate = tf.train.exponential_decay(0.0005, self.global_step, decay_steps=decay_steps, decay_rate=0.94, staircase=True)
+        #learning_rate = 0.1
         tf.summary.scalar('Learning_rate', learning_rate)
-        self.optimizer = tf.train.AdamOptimizer(0.00001)
+
+        clip_min = - max_norm/learning_rate
+        clip_max = max_norm/learning_rate
+
+        #self.optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=1.0)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate) 
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
 
-        #for gradient,num in enumerate(gradients):
-            #tf.summary.histogram('Gradient_'+str(num), gradient)
 
-        clipped_gradients, _ = tf.clip_by_global_norm(gradients,max_norm)
+        #tf.clip_by_norm(x, 5.0,'Clip_by_norm')
+        #clipped_gradients = list(map(lambda x: tf.clip_by_value(x,clip_min,clip_max,'Clip_by_value'), gradients))
+        #clipped_gradients = list(map(lambda x: tf.clip_by_norm(x, 5.0), gradients))
+        #clipped_gradients = tf.clip_by_value(gradients,clip_min,clip_max,'Clip_by_value')
+        clipped_gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+        #tf.summary.histogram('clupg',clipped_gradients)
+        #for gradient,num in enumerate(clipped_gradients):
+            #tf.summary.histogram('Gradient_'+str(num), gradient)
         self.train_step = self.optimizer.apply_gradients(zip(clipped_gradients,tvars), global_step=self.global_step)
         #self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
 
@@ -72,6 +80,7 @@ class Model_class(object):
         self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
         self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
         self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
+
 
     def Construct_Accuracy_op(self):
         with tf.name_scope('accuracy'):
@@ -136,7 +145,6 @@ class Model_class(object):
         if restore:
             self.Try_restore(session)
 
-
         self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
@@ -147,7 +155,8 @@ class Model_class(object):
             train_feed_dict = {**IO_feed_dict, **self.train_dict}
 
             #Train Step
-            _, loss = session.run([self.train_step ,self.loss], feed_dict=train_feed_dict)
+            loss = session.run([self.loss], feed_dict=train_feed_dict)
+            session.run([self.train_step], feed_dict=train_feed_dict)
             print ('Step: ',step+1,'Loss: ',loss)
 
 
@@ -160,7 +169,7 @@ class Model_class(object):
             if(step + 1) % log_iteration == 0:
                 test_feed_dict = {**IO_feed_dict, **self.test_dict}               #Construst Test dict
                 summary, train_accuracy, glo_step = session.run([self.merged, self.accuracy, self.global_step], \
-                        feed_dict=test_feed_dict)
+                                feed_dict=test_feed_dict)
                 self.log_writer.add_summary(summary, glo_step)
 
 

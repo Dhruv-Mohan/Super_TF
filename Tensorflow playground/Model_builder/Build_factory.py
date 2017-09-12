@@ -171,7 +171,7 @@ class Factory(object):
 
                 #AuxLogit Loss
                 with tf.name_scope('Cross_entropy_loss'):
-                    softmax_auxlogit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=model_aux_logits))
+                    softmax_auxlogit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=model_aux_logits)) * 0.6
 
                 #Adding collections to graph
                 tf.add_to_collection(self.model_name + '_Endpoints', Block_35)
