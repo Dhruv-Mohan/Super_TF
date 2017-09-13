@@ -56,6 +56,44 @@ class Factory(object):
                     res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
 
                     return res_connect
+
+
+                #Build Encoder
+
+                Encoder1 = stack_encoder(input_reshape, 24)
+                Pool1 = unet_res_builder.Pool_layer(Encoder1) #512
+
+                Encoder2 = stack_encoder(Pool1, 64)
+                Pool2 = unet_res_builder.Pool_layer(Encoder2) #256
+
+                Encoder3 = stack_encoder(Pool2, 128)
+                Pool3 = unet_res_builder.Pool_layer(Encoder3) #128
+
+                Encoder4 = stack_encoder(Pool3, 256)
+                Pool4 = unet_res_builder.Pool_layer(Encoder4) #64
+
+                Encoder5 = stack_encoder(Pool4, 512)
+                Pool5 = unet_res_builder.Pool_layer(Encoder5) #32
+
+                Encoder6 = stack_encoder(Pool5, 768)
+                Pool6 = unet_res_builder.Pool_layer(Encoder6) #16
+
+                #Center
+                Conv_center = unet_res_builder.Conv2d_layer(Pool6, stride=[1, 1, 1, 1], filters=768, Batch_norm=True, padding='SAME')
+                Pool_center = unet_res_builder.Pool_layer(Conv_center) #8
+                #Build Decoder
+
+                Decode1 = stack_decoder(Pool_center, Encoder6, out_filters=512)
+                Decode2 = stack_decoder(Decode1, Encoder5, out_filters=256)
+                Decode3 = stack_decoder(Decode2, Encoder4, out_filters=128)
+                Decode4 = stack_decoder(Decode3, Encoder3, out_filters=64)
+                Decode5 = stack_decoder(Decode4, Encoder2, out_filters=24)
+                Decode6 = stack_decoder(Decode5, Encoder1, out_filters=24)
+
+                output = unet_res_builder.Conv2d_layer(Decode6, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
+                #Add loss and debug
+
+
     def Build_Inception_Resnet_v2a(self):
         with tf.name_scope('Inception_Resnet_v2a_model'):
             with Builder(**self.kwargs) as inceprv2a_builder:
