@@ -12,6 +12,50 @@ class Factory(object):
         print('Build_'+self.model_name+'()')
         return (eval('self.Build_'+self.model_name+'()'))
     
+    def Build_Unet_resent(self):
+        with tf.name_scope('Unet_resnet'):
+            with Builder(**self.kwargs) as unet_res_builder:
+                input_placeholder = tf.placeholder(tf.float32, \
+                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
+                output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
+                dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
+                state_placeholder = tf.placeholder(tf.string, name="State")
+                input_reshape = unet_res_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+
+                #Setting control params
+                unet_res_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+
+                def stack_encoder(input, out_filters):
+                    input = unet_res_builder.Relu(input)
+
+                    conv1a_split1 = unet_res_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Activation=False, Batch_norm=True)
+
+                    conv1b_split1 = unet_res_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
+                    conv2b_split1 = unet_res_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Activation=False, Batch_norm=True)
+
+                    res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
+
+                    return res_connect
+
+                def stack_decoder(input, encoder_connect, out_filters):
+                    encoder_connect_shape = encoder_connect.get_shape().as_list()
+                    del encoder_connect_shape[0]
+                    res_filters = encoder_connect_shape.pop(2)
+
+                    upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 3, 3, 1], filters=res_filters, Batch_norm=True) #change_filters to match encoder_connect filters
+
+                    u_connect = unet_res_builder.Concat([encoder_connect, upscale_input])
+                    conv1 = unet_res_builder.Conv2d_layer(u_connect, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Batch_norm=True)
+
+
+                    conv1a_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Activation=False, Batch_norm=True)
+
+                    conv1b_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
+                    conv2b_split1 = unet_res_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Activation=False, Batch_norm=True)
+
+                    res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
+
+                    return res_connect
     def Build_Inception_Resnet_v2a(self):
         with tf.name_scope('Inception_Resnet_v2a_model'):
             with Builder(**self.kwargs) as inceprv2a_builder:
