@@ -18,6 +18,7 @@ class Factory(object):
                 input_placeholder = tf.placeholder(tf.float32, \
                     shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
                 output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
+                weight_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Weights')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 state_placeholder = tf.placeholder(tf.string, name="State")
                 input_reshape = unet_res_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
@@ -92,7 +93,11 @@ class Factory(object):
 
                 output = unet_res_builder.Conv2d_layer(Decode6, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
                 #Add loss and debug
+                logits = tf.reshape(output, (-1, self.kwargs['Classes']))
+                softmax = tf.nn.softmax(logits)
+                eps = tf.constant(value=1e-4)
 
+                CE_loss = tf.reduce_sum(tf.multiply(output_placeholder * tf.log(softmax), weight_placeholder)) #Fix output and weight shape
 
     def Build_Inception_Resnet_v2a(self):
         with tf.name_scope('Inception_Resnet_v2a_model'):
