@@ -94,10 +94,20 @@ class Factory(object):
                 output = unet_res_builder.Conv2d_layer(Decode6, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
                 #Add loss and debug
                 logits = tf.reshape(output, (-1, self.kwargs['Classes']))
-                eps = tf.constant(value=1e-4)
+                eps = tf.constant(value=1e-5)
                 softmax = tf.nn.softmax(logits) + eps
 
                 CE_loss = tf.reduce_sum(tf.multiply(output_placeholder * tf.log(softmax), weight_placeholder)) #Fix output and weight shape
+
+                #Dice Loss
+                exponential_map = tf.exp(output)
+                sum_exp = tf.reduce_sum(exponential_map, 3, keep_dims=True)
+                tensor_sum_exp = tf.tile(sum_exp, tf.stack([1, 1, 1, tf.shape(output)[3]]))
+                pixel_softmax = tf.div(exponential_map,tensor_sum_exp)
+
+                intersection = tf.reduce_sum(pixel_softmax * output_placeholder)
+                union = eps + tf.reduce_sum(prediction) + tf.reduce_sum(output_placeholder)
+                Dice_loss = -(2* intersection/(union))
 
     def Build_Inception_Resnet_v2a(self):
         with tf.name_scope('Inception_Resnet_v2a_model'):
