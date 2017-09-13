@@ -94,8 +94,8 @@ class Factory(object):
                 output = unet_res_builder.Conv2d_layer(Decode6, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
                 #Add loss and debug
                 logits = tf.reshape(output, (-1, self.kwargs['Classes']))
-                softmax = tf.nn.softmax(logits)
                 eps = tf.constant(value=1e-4)
+                softmax = tf.nn.softmax(logits) + eps
 
                 CE_loss = tf.reduce_sum(tf.multiply(output_placeholder * tf.log(softmax), weight_placeholder)) #Fix output and weight shape
 
