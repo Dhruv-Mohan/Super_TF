@@ -95,9 +95,10 @@ class Factory(object):
                 #Add loss and debug
                 logits = tf.reshape(output, (-1, self.kwargs['Classes']))
                 eps = tf.constant(value=1e-5)
-                softmax = tf.nn.softmax(logits) + eps
-
-                CE_loss = tf.reduce_sum(tf.multiply(output_placeholder * tf.log(softmax), weight_placeholder)) #Fix output and weight shape
+                sigmoid = tf.nn.sigmoid(logits) + eps
+                BCE_loss = output_placeholder * tf.log(sigmoid) #Fix output and weight shape
+                Weighted_BCE_loss = tf.multiply(BCE_loss, weight_placeholder) + tf.multiply(tf.clip_by_value(logits, 0, 1e4), weight_placeholder)
+                Weighted_BCE_loss = tf.reduce_mean(Weighted_BCE_loss)
 
                 #Dice Loss
                 exponential_map = tf.exp(output)
