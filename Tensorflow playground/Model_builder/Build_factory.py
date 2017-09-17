@@ -105,6 +105,18 @@ class Factory(object):
                 union = eps + tf.reduce_sum(sigmoid) + tf.reduce_sum(output_placeholder)
                 Dice_loss = -(2* intersection/(union))
 
+                #Graph Exports
+                tf.add_to_collection(self.model_name + '_Input_ph', input_placeholder)
+                tf.add_to_collection(self.model_name + '_Input_reshape', input_reshape)
+                tf.add_to_collection(self.model_name + '_Weight_placeholder', weight_placeholder)
+                tf.add_to_collection(self.model_name + '_Output_ph', output_placeholder)
+                tf.add_to_collection(self.model_name + '_Output', output)
+                tf.add_to_collection(self.model_name + '_Dropout_prob_ph', dropout_prob_placeholder)
+                tf.add_to_collection(self.model_name + '_State', state_placeholder)
+                tf.add_to_collection(self.model_name + '_Loss', Weighted_BCE_loss)
+                tf.add_to_collection(self.model_name + '_Loss', Dice_loss)
+
+
     def Build_Inception_Resnet_v2a(self):
         with tf.name_scope('Inception_Resnet_v2a_model'):
             with Builder(**self.kwargs) as inceprv2a_builder:
