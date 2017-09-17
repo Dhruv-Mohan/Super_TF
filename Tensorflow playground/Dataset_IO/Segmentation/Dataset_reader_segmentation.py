@@ -92,7 +92,14 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
     def pre_process_image(self,pre_process_op):
         with tf.name_scope('Pre_Processing_op') as scope:
             self.images = pre_process_op(self.images)
-        
+
+    def pre_process_weights(self,pre_process_op):
+        with tf.name_scope('Pre_Processing_op') as scope:
+            self.mask_weights = pre_process_op(self.mask_weights)
+
+    def pre_process_mask(self,pre_process_op):
+        with tf.name_scope('Pre_Processing_op') as scope:
+            self.masks = pre_process_op(self.masks)
 
     def batch_inputs(self):
         image, mask, mask_weight = self.single_read()

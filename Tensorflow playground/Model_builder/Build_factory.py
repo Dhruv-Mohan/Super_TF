@@ -12,17 +12,21 @@ class Factory(object):
         print('Build_'+self.model_name+'()')
         return (eval('self.Build_'+self.model_name+'()'))
     
-    def Build_Unet_resent(self):
+    def Build_Unet_resnet(self):
         with tf.name_scope('Unet_resnet'):
             with Builder(**self.kwargs) as unet_res_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
                     shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
-                weight_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Weights')
+                output_placeholder = tf.placeholder(tf.float32, \
+                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Mask')
+                weight_placeholder = tf.placeholder(tf.float32, \
+                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Weight')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = unet_res_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
-
+                input_reshape = unet_res_builder.Reshape_input(input_placeholder, \
+                    width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+                #batch_size = tf.slice(tf.shape(input_placeholder),[0],[1])
+                batch_size = 1
                 #Setting control params
                 unet_res_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
 
@@ -38,12 +42,13 @@ class Factory(object):
 
                     return res_connect
 
-                def stack_decoder(input, encoder_connect, out_filters):
+                def stack_decoder(input, encoder_connect, out_filters, output_shape):
                     encoder_connect_shape = encoder_connect.get_shape().as_list()
+                    print ('encoder shape', encoder_connect_shape)
                     del encoder_connect_shape[0]
                     res_filters = encoder_connect_shape.pop(2)
 
-                    upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 3, 3, 1], filters=res_filters, Batch_norm=True) #change_filters to match encoder_connect filters
+                    upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 3, 3, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape ,batch_size=batch_size) #change_filters to match encoder_connect filters
 
                     u_connect = unet_res_builder.Concat([encoder_connect, upscale_input])
                     conv1 = unet_res_builder.Conv2d_layer(u_connect, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Batch_norm=True)
@@ -84,14 +89,15 @@ class Factory(object):
                 Pool_center = unet_res_builder.Pool_layer(Conv_center) #8
                 #Build Decoder
 
-                Decode1 = stack_decoder(Pool_center, Encoder6, out_filters=512)
-                Decode2 = stack_decoder(Decode1, Encoder5, out_filters=256)
-                Decode3 = stack_decoder(Decode2, Encoder4, out_filters=128)
-                Decode4 = stack_decoder(Decode3, Encoder3, out_filters=64)
-                Decode5 = stack_decoder(Decode4, Encoder2, out_filters=24)
-                Decode6 = stack_decoder(Decode5, Encoder1, out_filters=24)
+                Decode1 = stack_decoder(Pool_center, Encoder6, out_filters=512, output_shape=[16, 16])
+                Decode2 = stack_decoder(Decode1, Encoder5, out_filters=256, output_shape=[32, 32])
+                Decode3 = stack_decoder(Decode2, Encoder4, out_filters=128, output_shape=[64, 64])
+                Decode4 = stack_decoder(Decode3, Encoder3, out_filters=64, output_shape=[128, 128])
+                Decode5 = stack_decoder(Decode4, Encoder2, out_filters=24, output_shape=[256, 256])
+                Decode6 = stack_decoder(Decode5, Encoder1, out_filters=24, output_shape=[512, 512])
 
                 output = unet_res_builder.Conv2d_layer(Decode6, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
+
                 #Add loss and debug
                 logits = tf.reshape(output, (-1, self.kwargs['Classes']))
                 eps = tf.constant(value=1e-5)
@@ -108,7 +114,7 @@ class Factory(object):
                 #Graph Exports
                 tf.add_to_collection(self.model_name + '_Input_ph', input_placeholder)
                 tf.add_to_collection(self.model_name + '_Input_reshape', input_reshape)
-                tf.add_to_collection(self.model_name + '_Weight_placeholder', weight_placeholder)
+                tf.add_to_collection(self.model_name + '_Weight_ph', weight_placeholder)
                 tf.add_to_collection(self.model_name + '_Output_ph', output_placeholder)
                 tf.add_to_collection(self.model_name + '_Output', output)
                 tf.add_to_collection(self.model_name + '_Dropout_prob_ph', dropout_prob_placeholder)
@@ -116,6 +122,7 @@ class Factory(object):
                 tf.add_to_collection(self.model_name + '_Loss', Weighted_BCE_loss)
                 tf.add_to_collection(self.model_name + '_Loss', Dice_loss)
 
+                return 'Segmentation'
 
     def Build_Inception_Resnet_v2a(self):
         with tf.name_scope('Inception_Resnet_v2a_model'):

@@ -69,7 +69,7 @@ class Model_class(object):
 
 
     def Construct_Model(self):
-        Factory(**self.kwargs).get_model()
+        self.model_dict['Model_Type'] = Factory(**self.kwargs).get_model()
 
         print('Model Graph Keys')
         print(tf.get_default_graph().get_all_collection_keys())
@@ -80,7 +80,8 @@ class Model_class(object):
         self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
         self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
         self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
-
+        if self.model_dict['Model_Type'] is 'Segmentation' :
+            self.model_dict['Weight_ph'] = tf.get_collection(self.Model_name + '_Weight_ph')[0]
 
     def Construct_Accuracy_op(self):
         with tf.name_scope('accuracy'):
@@ -105,6 +106,12 @@ class Model_class(object):
             #graph_writer.add_graph(session.graph)
             #graph_writer.close();
 
+    def Construct_IO_dict(self, data):
+        if self.model_dict['Model_Type'] is 'Classification':
+            return {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}
+
+        elif self.model_dict['Model_Type'] is 'Segmentation':
+            return {self.model_dict['input_ph']: batch[0], self.model_dict['Output_ph']: batch[1], self.model_dict['Weight_ph']: batch[2]}
 
     def Construct_Predict_op(self):
         with tf.name_scope('Predict'):
@@ -151,7 +158,7 @@ class Model_class(object):
         for step in range(iterations):
             step = session.run([self.global_step])[0]
             batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
-            IO_feed_dict = {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}            #Construct train dict
+            IO_feed_dict = self.Construct_IO_dict(batch)            #Construct train dict
             train_feed_dict = {**IO_feed_dict, **self.train_dict}
 
             #Train Step

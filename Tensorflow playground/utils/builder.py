@@ -70,7 +70,7 @@ class Builder(object):
 
             return final_conv
 
-    def Upconv_layer(self, intput, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004):
+    def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004, batch_size):
         with tf.name_scope('Deconv') as scope:
 
             if batch_type is None:
@@ -80,17 +80,18 @@ class Builder(object):
             input_shape = input.get_shape().as_list()[3]
             weight_shape = [3 ,3] + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape, weight_decay)
-            final_shape= [input.get_shape().as_list()[0], output_shape[0], output_shape[1], int(filters)]
-
+            final_shape  = [batch_size, output_shape[0], output_shape[1], int(filters)]
+            #final_shape= tf.convert_to_tensor([input.get_shape().as_list()[0], output_shape[0], output_shape[1], int(filters)])
+            
             final_deconv = tf.nn.conv2d_transpose(input, weights, output_shape=final_shape, strides=stride, padding=padding)
 
             if Activation:
-                final_conv = self.Relu(final_conv)
+                final_deconv = self.Relu(final_deconv)
 
             if Batch_norm:
-                final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
+                final_deconv = self.Batch_norm(final_deconv, batch_type=batch_type)
 
-            return final_conv
+            return final_deconv
 
     def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1], padding='SAME', pooling_type='MAX'):
         with tf.name_scope('Pool') as scope:
