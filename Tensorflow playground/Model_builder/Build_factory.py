@@ -101,13 +101,8 @@ class Factory(object):
                 Weighted_BCE_loss = tf.reduce_mean(Weighted_BCE_loss)
 
                 #Dice Loss
-                exponential_map = tf.exp(output)
-                sum_exp = tf.reduce_sum(exponential_map, 3, keep_dims=True)
-                tensor_sum_exp = tf.tile(sum_exp, tf.stack([1, 1, 1, tf.shape(output)[3]]))
-                pixel_softmax = tf.div(exponential_map,tensor_sum_exp)
-
-                intersection = tf.reduce_sum(pixel_softmax * output_placeholder)
-                union = eps + tf.reduce_sum(prediction) + tf.reduce_sum(output_placeholder)
+                intersection = tf.reduce_sum(sigmoid * output_placeholder)
+                union = eps + tf.reduce_sum(sigmoid) + tf.reduce_sum(output_placeholder)
                 Dice_loss = -(2* intersection/(union))
 
     def Build_Inception_Resnet_v2a(self):
