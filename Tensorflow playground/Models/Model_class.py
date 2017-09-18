@@ -14,7 +14,7 @@ class Model_class(object):
         self.test_dict = {}
         self.train_dict = {}
         self.model_dict={}
-
+        self.accuracy_op = False
 
     def Set_test_control(self, control_placeholders_dict):
         for key, value in control_placeholders_dict.items():
@@ -90,6 +90,7 @@ class Model_class(object):
             tf.summary.image(name='False images', tensor=false_images)
             self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
             tf.summary.scalar('accuracy', self.accuracy)
+            self.accuracy_op = True
             #tf.cond(self.accuracy > 0.92, lambda: tf.summary.image(name='False images', tensor=false_images), lambda: tf.summary.tensor_summary(name='correct_predictions', tensor=correct_prediction))
 
     def Construct_Writers(self, session=None):
@@ -175,7 +176,11 @@ class Model_class(object):
             #logger block
             if(step + 1) % log_iteration == 0:
                 test_feed_dict = {**IO_feed_dict, **self.test_dict}               #Construst Test dict
-                summary, train_accuracy, glo_step = session.run([self.merged, self.accuracy, self.global_step], \
+                if self.accuracy_op:
+                    summary, train_accuracy, glo_step = session.run([self.merged, self.accuracy, self.global_step], \
+                                feed_dict=test_feed_dict)
+                else:
+                    summary, glo_step = session.run([self.merged, self.global_step], \
                                 feed_dict=test_feed_dict)
                 self.log_writer.add_summary(summary, glo_step)
 
