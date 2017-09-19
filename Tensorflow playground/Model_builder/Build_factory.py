@@ -18,9 +18,9 @@ class Factory(object):
                 input_placeholder = tf.placeholder(tf.float32, \
                     shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
                 output_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Mask')
+                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']], name='Mask')
                 weight_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Weight')
+                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']], name='Weight')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 state_placeholder = tf.placeholder(tf.string, name="State")
                 input_reshape = unet_res_builder.Reshape_input(input_placeholder, \
@@ -30,36 +30,38 @@ class Factory(object):
                 unet_res_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
 
                 def stack_encoder(input, out_filters):
-                    input = unet_res_builder.Relu(input)
+                    with tf.name_scope('Encoder'):
+                        input = unet_res_builder.Relu(input)
 
-                    conv1a_split1 = unet_res_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Activation=False, Batch_norm=True)
+                        conv1a_split1 = unet_res_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Activation=False, Batch_norm=True)
 
-                    conv1b_split1 = unet_res_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
-                    conv2b_split1 = unet_res_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Activation=False, Batch_norm=True)
+                        conv1b_split1 = unet_res_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
+                        conv2b_split1 = unet_res_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Activation=False, Batch_norm=True)
 
-                    res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
+                        res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
 
-                    return res_connect
+                        return res_connect
 
                 def stack_decoder(input, encoder_connect, out_filters, output_shape):
-                    encoder_connect_shape = encoder_connect.get_shape().as_list()
-                    del encoder_connect_shape[0]
-                    res_filters = encoder_connect_shape.pop(2)
+                    with tf.name_scope('Decoder'):
+                        encoder_connect_shape = encoder_connect.get_shape().as_list()
+                        del encoder_connect_shape[0]
+                        res_filters = encoder_connect_shape.pop(2)
 
-                    upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 3, 3, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape) #change_filters to match encoder_connect filters
+                        upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 2, 2, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape) #change_filters to match encoder_connect filters
 
-                    u_connect = unet_res_builder.Concat([encoder_connect, upscale_input])
-                    conv1 = unet_res_builder.Conv2d_layer(u_connect, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Batch_norm=True)
+                        u_connect = unet_res_builder.Concat([encoder_connect, upscale_input])
+                        conv1 = unet_res_builder.Conv2d_layer(u_connect, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Batch_norm=True)
 
 
-                    conv1a_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Activation=False, Batch_norm=True)
+                        conv1a_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Activation=False, Batch_norm=True)
 
-                    conv1b_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
-                    conv2b_split1 = unet_res_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Activation=False, Batch_norm=True)
+                        conv1b_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
+                        conv2b_split1 = unet_res_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Activation=False, Batch_norm=True)
 
-                    res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
+                        res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
 
-                    return res_connect
+                        return res_connect
 
 
                 #Build Encoder
@@ -84,10 +86,10 @@ class Factory(object):
 
                 #Center
                 Conv_center = unet_res_builder.Conv2d_layer(Pool6, stride=[1, 1, 1, 1], filters=768, Batch_norm=True, padding='SAME')
-                Pool_center = unet_res_builder.Pool_layer(Conv_center) #8
+                #Pool_center = unet_res_builder.Pool_layer(Conv_center) #8
                 #Build Decoder
 
-                Decode1 = stack_decoder(Pool_center, Encoder6, out_filters=512, output_shape=[16, 16])
+                Decode1 = stack_decoder(Conv_center, Encoder6, out_filters=512, output_shape=[16, 16])
                 Decode2 = stack_decoder(Decode1, Encoder5, out_filters=256, output_shape=[32, 32])
                 Decode3 = stack_decoder(Decode2, Encoder4, out_filters=128, output_shape=[64, 64])
                 Decode4 = stack_decoder(Decode3, Encoder3, out_filters=64, output_shape=[128, 128])
@@ -97,17 +99,20 @@ class Factory(object):
                 output = unet_res_builder.Conv2d_layer(Decode6, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
 
                 #Add loss and debug
-                logits = tf.reshape(output, (-1, self.kwargs['Classes']))
-                eps = tf.constant(value=1e-5)
-                sigmoid = tf.nn.sigmoid(logits) + eps
-                BCE_loss = output_placeholder * tf.log(sigmoid) #Fix output and weight shape
-                Weighted_BCE_loss = tf.multiply(BCE_loss, weight_placeholder) + tf.multiply(tf.clip_by_value(logits, 0, 1e4), weight_placeholder)
-                Weighted_BCE_loss = tf.reduce_mean(Weighted_BCE_loss)
+                with tf.name_scope('BCE_Loss'):
+                    print(self.kwargs['Image_width']*self.kwargs['Image_height'])
+                    logits = tf.reshape(output, (-1, self.kwargs['Image_width']*self.kwargs['Image_height']))
+                    eps = tf.constant(value=1e-5)
+                    sigmoid = tf.nn.sigmoid(logits) + eps
+                    BCE_loss = tf.multiply(output_placeholder, tf.log(sigmoid)) #Fix output and weight shape
+                    Weighted_BCE_loss = tf.multiply(BCE_loss, weight_placeholder) + tf.multiply(tf.clip_by_value(logits, 0, 1e4), weight_placeholder)
+                    Weighted_BCE_loss = tf.reduce_mean(Weighted_BCE_loss)
 
                 #Dice Loss
-                intersection = tf.reduce_sum(sigmoid * output_placeholder)
-                union = eps + tf.reduce_sum(sigmoid) + tf.reduce_sum(output_placeholder)
-                Dice_loss = -(2* intersection/(union))
+                with tf.name_scope('Dice_Loss'):
+                    intersection = tf.reduce_sum(sigmoid * output_placeholder)
+                    union = eps + tf.reduce_sum(sigmoid) + tf.reduce_sum(output_placeholder)
+                    Dice_loss = -(2* intersection/(union))
 
                 #Graph Exports
                 tf.add_to_collection(self.model_name + '_Input_ph', input_placeholder)

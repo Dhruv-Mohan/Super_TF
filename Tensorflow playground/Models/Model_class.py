@@ -107,12 +107,12 @@ class Model_class(object):
             #graph_writer.add_graph(session.graph)
             #graph_writer.close();
 
-    def Construct_IO_dict(self, data):
+    def Construct_IO_dict(self, batch):
         if self.model_dict['Model_Type'] is 'Classification':
             return {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}
 
         elif self.model_dict['Model_Type'] is 'Segmentation':
-            return {self.model_dict['input_ph']: batch[0], self.model_dict['Output_ph']: batch[1], self.model_dict['Weight_ph']: batch[2]}
+            return {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1], self.model_dict['Weight_ph']: batch[2]}
 
     def Construct_Predict_op(self):
         with tf.name_scope('Predict'):
