@@ -26,7 +26,6 @@ class Factory(object):
                 input_reshape = unet_res_builder.Reshape_input(input_placeholder, \
                     width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
                 #batch_size = tf.slice(tf.shape(input_placeholder),[0],[1])
-                batch_size = 1
                 #Setting control params
                 unet_res_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
 
@@ -44,11 +43,10 @@ class Factory(object):
 
                 def stack_decoder(input, encoder_connect, out_filters, output_shape):
                     encoder_connect_shape = encoder_connect.get_shape().as_list()
-                    print ('encoder shape', encoder_connect_shape)
                     del encoder_connect_shape[0]
                     res_filters = encoder_connect_shape.pop(2)
 
-                    upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 3, 3, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape ,batch_size=batch_size) #change_filters to match encoder_connect filters
+                    upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 3, 3, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape) #change_filters to match encoder_connect filters
 
                     u_connect = unet_res_builder.Concat([encoder_connect, upscale_input])
                     conv1 = unet_res_builder.Conv2d_layer(u_connect, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Batch_norm=True)

@@ -70,7 +70,7 @@ class Builder(object):
 
             return final_conv
 
-    def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004, batch_size):
+    def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004):
         with tf.name_scope('Deconv') as scope:
 
             if batch_type is None:
@@ -80,11 +80,12 @@ class Builder(object):
             input_shape = input.get_shape().as_list()[3]
             weight_shape = [3 ,3] + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape, weight_decay)
-            final_shape  = [batch_size, output_shape[0], output_shape[1], int(filters)]
+            #final_shape  = [batch_size, output_shape[0], output_shape[1], int(filters)]
             #final_shape= tf.convert_to_tensor([input.get_shape().as_list()[0], output_shape[0], output_shape[1], int(filters)])
-            
+            batch_size = tf.shape(input)[0]
+            final_shape = tf.stack([batch_size, output_shape[0], output_shape[1], int(filters)])
             final_deconv = tf.nn.conv2d_transpose(input, weights, output_shape=final_shape, strides=stride, padding=padding)
-
+            final_deconv = tf.reshape(final_deconv,[-1, output_shape[0], output_shape[1], int(filters)])
             if Activation:
                 final_deconv = self.Relu(final_deconv)
 
