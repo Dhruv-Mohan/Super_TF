@@ -39,7 +39,7 @@ class Builder(object):
     def Bias_variable(self, shape, weight_decay=0.04):
         with tf.name_scope('Bias') as scope:
             #with tf.variable_scope("Bias") as var_scope:
-            biases = tf.Variable(tf.constant(0.0, shape=[int(shape)]))
+            biases = tf.Variable(tf.constant(0.01, shape=[int(shape)]))
             #tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(biases, weight_decay))
             #biases = tf.get_variable(name='Bias', shape=shape, initializer=tf.constant_initializer(0.1) , trainable=True, regularizer=self.Regloss_l2)
 
@@ -50,7 +50,7 @@ class Builder(object):
     def Relu(self, input):
         return tf.nn.relu(input, name='Relu')
 
-    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004):
+    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00004):
         with tf.name_scope('Conv') as scope:
 
             if batch_type is None:
@@ -70,7 +70,7 @@ class Builder(object):
 
             return final_conv
 
-    def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.0004, k_size=[3, 3]):
+    def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
         with tf.name_scope('Deconv') as scope:
 
             if batch_type is None:
@@ -106,8 +106,36 @@ class Builder(object):
                 #tf.summary.histogram('Pool_activations', Pool)
             return Pool
 
+    def Unpool_layer(pool, ind, ksize=[1, 2, 2, 1], scope='unpool'):
+        # https://github.com/tensorflow/tensorflow/issues/2169
+        """
+           Unpooling layer after max_pool_with_argmax.
+           Args:
+               pool:   max pooled output tensor
+               ind:      argmax indices
+               ksize:     ksize is the same as for the pool
+           Return:
+               unpool:    unpooling tensor
+        """
+        with tf.variable_scope(scope):
+            input_shape =  tf.shape(pool)
+            output_shape = [input_shape[0], input_shape[1] * ksize[1], input_shape[2] * ksize[2], input_shape[3]]
 
-    def FC_layer(self, input, filters=1024, readout=False, weight_decay=0.0004): #Expects flattened layer
+            flat_input_size = tf.cumprod(input_shape)[-1]
+            flat_output_shape = tf.stack([output_shape[0], output_shape[1] * output_shape[2] * output_shape[3]])
+
+            pool_ = tf.reshape(pool, tf.stack([flat_input_size]))
+            batch_range = tf.reshape(tf.range(tf.cast(output_shape[0], tf.int64), dtype=ind.dtype), 
+                                              shape=tf.stack([input_shape[0], 1, 1, 1]))
+            b = tf.ones_like(ind) * batch_range
+            b = tf.reshape(b, tf.stack([flat_input_size, 1]))
+            ind_ = tf.reshape(ind, tf.stack([flat_input_size, 1]))
+            ind_ = tf.concat([b, ind_], 1)
+
+            ret = tf.scatter_nd(ind_, pool_, shape=tf.cast(flat_output_shape, tf.int64))
+            ret = tf.reshape(ret, tf.stack(output_shape))
+            return ret
+    def FC_layer(self, input, filters=1024, readout=False, weight_decay=0.00004): #Expects flattened layer
         with tf.name_scope('FC') as scope:
 
             input_shape = input.get_shape().as_list()
@@ -199,16 +227,16 @@ class Builder(object):
             return tf.multiply(l2_weight, tf.nn.l2_loss(input), name='value')
       
 
-    '''
-    def variable_summaries(self, var):
+    
+    def variable_summaries(self, var, name):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
         with tf.name_scope('summaries'):
             mean = tf.reduce_mean(var)
-            tf.summary.scalar('mean', mean)
+            tf.summary.scalar(name + 'mean', mean)
             with tf.name_scope('stddev'):
                 stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-            tf.summary.scalar('stddev', stddev)
-            tf.summary.scalar('max', tf.reduce_max(var))
-            tf.summary.scalar('min', tf.reduce_min(var))
-            tf.summary.histogram('histogram', var)
-    '''
+            tf.summary.scalar(name + 'stddev', stddev)
+            tf.summary.scalar(name + 'max', tf.reduce_max(var))
+            tf.summary.scalar(name + 'min', tf.reduce_min(var))
+            tf.summary.histogram(name + 'histogram', var)
+    
