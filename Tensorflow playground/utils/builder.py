@@ -102,6 +102,10 @@ class Builder(object):
             elif pooling_type == 'AVG':
                 Pool = tf.nn.avg_pool(input, ksize=k_size, \
                     strides=stride, padding=padding, name="AVG_POOL")
+            elif pooling_type == 'MAXIND':
+                Pool, ind = tf.nn.max_pool_with_argmax(input, k_size=k_size,\
+                    strides=stride, padding=padding, name='MAX_POOL_WITH_ARGMAX')
+                return Pool, ind
             #if self.Summary:
                 #tf.summary.histogram('Pool_activations', Pool)
             return Pool
