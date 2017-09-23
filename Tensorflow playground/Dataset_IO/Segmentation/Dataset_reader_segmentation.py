@@ -45,6 +45,7 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
         mask_weight.set_shape(self.mask_shape)
 
         image = tf.image.convert_image_dtype(image, tf.float32)
+        image =tf.image.per_image_standardization(image)
         mask = tf.squeeze(tf.image.convert_image_dtype(mask, tf.float32))
         mask_weight = tf.squeeze(tf.image.convert_image_dtype(mask_weight, tf.float32))
         mask_weight = tf.expand_dims(mask_weight,2)
