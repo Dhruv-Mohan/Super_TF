@@ -104,7 +104,7 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
 
     def batch_inputs(self):
         image, mask, mask_weight = self.single_read()
-        images,masks ,mask_weights= tf.train.shuffle_batch([image, mask, mask_weight], batch_size=self.batch_size, num_threads=4, capacity=3, min_after_dequeue=2)
+        images,masks ,mask_weights= tf.train.shuffle_batch([image, mask, mask_weight], batch_size=self.batch_size, num_threads=4, capacity=2, min_after_dequeue=1)
         return images, masks, mask_weights
         #TODO: CONFIGURABLE PARAMS
 

@@ -121,7 +121,7 @@ class Builder(object):
            Return:
                unpool:    unpooling tensor
         """
-        with tf.variable_scope('Unpool'):
+        with tf.name_scope('Unpool'):
             input_shape =  tf.shape(pool)
             input_shape_aslist = pool.get_shape().as_list()
             output_shape = tf.stack([input_shape[0], input_shape[1] * k_size[1], input_shape[2] * k_size[2], input_shape[3]])
@@ -134,7 +134,7 @@ class Builder(object):
             b = tf.reshape(b, tf.stack([ input_shape_aslist[1] * input_shape_aslist[2] * input_shape_aslist[3], 1]))
             ind_ = tf.reshape(ind, tf.stack( [input_shape_aslist[1] * input_shape_aslist[2] * input_shape_aslist[3], 1]))
             ind_ = tf.concat([b, ind_], 1)
-            ret = tf.scatter_nd(ind_, pool_, shape=tf.cast([-1, output_shapeaslist[1] * output_shapeaslist[2] * output_shapeaslist[3] ], tf.int64))
+            ret = tf.scatter_nd(ind_, pool_, shape=tf.cast([input_shape[0], output_shapeaslist[1] * output_shapeaslist[2] * output_shapeaslist[3] ], tf.int64))
             ret = tf.reshape(ret, [-1, output_shapeaslist[1], output_shapeaslist[2], output_shapeaslist[3]])
             return ret
     def FC_layer(self, input, filters=1024, readout=False, weight_decay=0.00004): #Expects flattened layer
@@ -218,7 +218,7 @@ class Builder(object):
 
     def Residual_connect(self, input, Activation=True):
         with tf.name_scope('Residual_Connection') as scope:
-            layer_sum = tf.add(input[0], input[1])
+            layer_sum = tf.add_n(input)
             if Activation:
                 layer_sum = tf.nn.relu(layer_sum, name='Relu')
             return layer_sum
