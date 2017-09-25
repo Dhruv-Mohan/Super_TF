@@ -127,9 +127,9 @@ class Factory(object):
                 Conv3 = RU(Conv3, 48)
 
                 
-                Upconv = frnn_a_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[1024, 1024])
+                Upconv = frnn_a_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[self.kwargs['Image_width'], self.kwargs['Image_height']])
                 Res_connect = frnn_a_builder.Residual_connect([Stem, Upconv])
-                output = frnn_a_builder.Conv2d_layer(Res_connect, filters=1, stride=[1, 1, 1, 1], k_size=[1, 1])
+                output = frnn_a_builder.Conv2d_layer(Res_connect, filters=1, stride=[1, 1, 1, 1], k_size=[1, 1], Batch_norm=True, Activation=False)
 
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
@@ -145,10 +145,12 @@ class Factory(object):
                 #Dice Loss
                 
                 with tf.name_scope('Dice_Loss'):
+                    weights = tf.reshape(weight_placeholder, shape=[-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                    w2 = weights
                     eps = tf.constant(value=1e-5, name='eps')
                     sigmoid = tf.nn.sigmoid(logits,name='sigmoid') + eps
-                    intersection = tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection') + 1
-                    union = eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + tf.reduce_sum(output_placeholder,1,name='reduce_mask') + 1
+                    intersection =tf.reduce_sum(sigmoid * output_placeholder*w2,axis=1,name='intersection') + 1
+                    union = eps + tf.reduce_sum(sigmoid*w2,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder*w2,1,name='reduce_mask') + 1)
                     Dice_loss = 2 * intersection / (union)
                     Dice_loss = 1 - tf.reduce_mean(Dice_loss,name='diceloss')
                     frnn_a_builder.variable_summaries(sigmoid, name='logits')
