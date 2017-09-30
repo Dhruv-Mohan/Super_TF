@@ -44,9 +44,9 @@ class Model_class(object):
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, max_norm=0.0002, starter_learning_rate=0.005, decay_steps=600000, decay_rate=0.56): #0.0001
+    def Set_optimizer(self, max_norm=0.0002, starter_learning_rate=0.005, decay_steps=60000, decay_rate=0.56): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
-        learning_rate = tf.train.exponential_decay(0.0001, self.global_step, decay_steps=decay_steps, decay_rate=0.94, staircase=True)
+        learning_rate = tf.train.exponential_decay(0.0001, self.global_step, decay_steps=decay_steps, decay_rate=0.5, staircase=True)
         #learning_rate = 0.0001
         tf.summary.scalar('Learning_rate', learning_rate)
 
