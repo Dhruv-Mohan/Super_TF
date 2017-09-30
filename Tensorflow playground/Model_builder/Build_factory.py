@@ -44,24 +44,26 @@ class Factory(object):
                         Pool, Ind = frnn_a_builder.Pool_layer(Residual_stream, k_size=scale_dims, stride=scale_dims, pooling_type='MAXIND')
 
                         Concat = frnn_a_builder.Concat([Pool, Pooling_stream])
-                        Conv0 = frnn_a_builder.Conv2d_layer(Concat, stride=[1,1,1,1], k_size=[1,1], filters=filters, Batch_norm=True)
-                        Conv1 = frnn_a_builder.Conv2d_layer(Conv0, stride=[1, 1, 1, 1], filters=filters, Batch_norm=True)
+
+                        #Conv0 = frnn_a_builder.Conv2d_layer(Concat, stride=[1,1,1,1], k_size=[1,1], filters=filters, Batch_norm=True)
+                        Conv1 = frnn_a_builder.Conv2d_layer(Concat, stride=[1, 1, 1, 1], filters=filters, Batch_norm=True)
                         Conv2 = frnn_a_builder.Conv2d_layer(Conv1, stride=[1, 1, 1, 1], filters=filters, Batch_norm=True)
 
-                        Res_connect = frnn_a_builder.Residual_connect([Conv0, Conv2])
-                        Conv3 = frnn_a_builder.Conv2d_layer(Res_connect, k_size=[1, 1], stride=[1, 1, 1, 1], filters=res_filters, Activation=False)
+                        #Res_connect = frnn_a_builder.Residual_connect([Conv0, Conv2])
+                        Conv3 = frnn_a_builder.Conv2d_layer(Conv2, k_size=[1, 1], stride=[1, 1, 1, 1], filters=res_filters, Activation=False)
 
                         Unpool = frnn_a_builder.Unpool_layer(Conv3, Ind, k_size = scale_dims)
                     Residual_stream_out = frnn_a_builder.Residual_connect([Residual_stream, Unpool])
-                    Pooling_stream_out = Res_connect
+                    Pooling_stream_out = Conv2
 
                     return Residual_stream_out, Pooling_stream_out
                     #return Conv2
 
                 #Model Construction
                 Stem = frnn_a_builder.Conv2d_layer(input_reshape, stride=[1, 1, 1, 1], k_size=[5, 5], filters=48, Batch_norm=True)
+                Stem = RU(Stem, 48)
                 Stem_pool = frnn_a_builder.Pool_layer(Stem)
-                Stem_pool = RU(Stem_pool, 48)
+                
                 Stem_pool = RU(Stem_pool, 48)
                 Stem_pool = RU(Stem_pool, 48)
 
@@ -85,8 +87,8 @@ class Factory(object):
                 Pooling_stream, ind3 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
 
                 scale_factor=8
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
 
                 Pooling_stream, ind4 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
 
@@ -94,7 +96,26 @@ class Factory(object):
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
 
+                Pooling_stream, ind5 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
+
+                scale_factor=32
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Pooling_stream, ind6 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
+
+                scale_factor=64
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
                 #Decoder
+                Pooling_stream = frnn_a_builder.Unpool_layer(Pooling_stream, ind6)
+                scale_factor = 32
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Pooling_stream = frnn_a_builder.Unpool_layer(Pooling_stream, ind5)
+                scale_factor = 16
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+
 
                 Pooling_stream = frnn_a_builder.Unpool_layer(Pooling_stream, ind4)
 
@@ -124,20 +145,38 @@ class Factory(object):
                 
                 Conv3 = RU(Conv3, 48)
                 Conv3 = RU(Conv3, 48)
-                Conv3 = RU(Conv3, 48)
+
 
                 
                 Upconv = frnn_a_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[self.kwargs['Image_width'], self.kwargs['Image_height']])
                 Res_connect = frnn_a_builder.Residual_connect([Stem, Upconv])
+                Res_connect = RU(Res_connect, 48)
                 output = frnn_a_builder.Conv2d_layer(Res_connect, filters=1, stride=[1, 1, 1, 1], k_size=[1, 1], Batch_norm=True, Activation=False)
 
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
+                    weights = tf.reshape(weight_placeholder, shape=[-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                    w2 = weights
                     print(self.kwargs['Image_width']*self.kwargs['Image_height'])
                     logits = tf.reshape(output, shape= [-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                    P = tf.minimum(tf.nn.sigmoid(logits)+1e-4,1.0) #safe for log sigmoid
+                    F1= -output_placeholder*tf.pow(1-P,2)*tf.log(P) -(1-output_placeholder)*tf.pow(P,2)*tf.log(1-P+1e-4)
+                    tf.summary.image('FOCAL Loss', tf.reshape(F1,[1, 1024, 1024, 1]))
+                    F1_count = tf.count_nonzero(tf.maximum(F1-0.1,0))
+                    final_focal_loss = tf.multiply(tf.reduce_sum(F1)/ tf.to_float(F1_count), 0.5)
+                    tf.summary.scalar('Count focal loss', F1_count)
+                    tf.summary.scalar('Focal losssum ', tf.reduce_sum(F1))
+                    #focal_loss = tf.multiply(tf.multiply(Y, tf.square(1 - P)),L) + tf.multiply(tf.multiply(1-Y, tf.square(P)),max_x+L)
+                    #final_focal_loss = tf.reduce_mean(focal_loss)
                     #eps = tf.constant(value=1e-5)
                     #sigmoid = tf.nn.sigmoid(logits) + eps
-                    Weighted_BCE_loss = tf.multiply(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder)),0.8)
+                    W_I = tf.multiply(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder),1)
+                    tf.summary.image('WCBE', tf.reshape(W_I, [1, 1024, 1024, 1]))
+                    W_I_count = tf.count_nonzero(tf.maximum(W_I-0.1,0))
+                    W_Is = tf.reduce_sum(W_I) / tf.to_float(W_I_count)
+                    Weighted_BCE_loss = tf.multiply(W_Is,0.5) #0.8
+                    tf.summary.scalar('Count WCBE loss', W_I_count)
+                    tf.summary.scalar('WCBE losssum ', tf.reduce_sum(W_I))
                     #Weighted_BCE_loss = tf.reduce_mean(output_placeholder * tf.log(sigmoid)) #Fix output and weight shape
                     #Weighted_BCE_loss = tf.multiply(BCE_loss, weight_placeholder) + tf.multiply(tf.clip_by_value(logits, 0, 1e4), weight_placeholder)
                     #Weighted_BCE_loss = tf.reduce_mean(Weighted_BCE_loss)
@@ -145,12 +184,11 @@ class Factory(object):
                 #Dice Loss
                 
                 with tf.name_scope('Dice_Loss'):
-                    weights = tf.reshape(weight_placeholder, shape=[-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
-                    w2 = weights
+
                     eps = tf.constant(value=1e-5, name='eps')
                     sigmoid = tf.nn.sigmoid(logits,name='sigmoid') + eps
-                    intersection =tf.reduce_sum(sigmoid * output_placeholder*w2,axis=1,name='intersection') + 1
-                    union = eps + tf.reduce_sum(sigmoid*w2,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder*w2,1,name='reduce_mask') + 1)
+                    intersection =tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection')
+                    union = tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + tf.reduce_sum(output_placeholder,1,name='reduce_mask') + 1e-5
                     Dice_loss = 2 * intersection / (union)
                     Dice_loss = 1 - tf.reduce_mean(Dice_loss,name='diceloss')
                     frnn_a_builder.variable_summaries(sigmoid, name='logits')
@@ -165,7 +203,10 @@ class Factory(object):
                 tf.add_to_collection(self.model_name + '_State', state_placeholder)
                 tf.add_to_collection(self.model_name + '_Loss', Weighted_BCE_loss)
                 tf.add_to_collection(self.model_name + '_Loss', Dice_loss)
-
+                tf.add_to_collection(self.model_name + '_Loss', final_focal_loss)
+                tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
+                tf.summary.scalar('Dice loss', Dice_loss)
+                tf.summary.scalar('Focal loss', final_focal_loss)
                 return 'Segmentation'
 
     def Build_Unet_resnet(self):
@@ -197,13 +238,14 @@ class Factory(object):
                         #res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
 
                         return conv2
-
-                def stack_decoder(input, encoder_connect, out_filters, output_shape):
+                def stack_decoder(input, encoder_connect, out_filters, output_shape, infilter=None):
                     with tf.name_scope('Decoder'):
                         encoder_connect_shape = encoder_connect.get_shape().as_list()
                         del encoder_connect_shape[0]
                         res_filters = encoder_connect_shape.pop(2)
 
+                        if infilter is not None:
+                            res_filters=infilter
                         upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 2, 2, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape) #change_filters to match encoder_connect filters
                         uconnect = unet_res_builder.Concat([encoder_connect, upscale_input])
                         conv1 = unet_res_builder.Conv2d_layer(uconnect, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
@@ -226,7 +268,7 @@ class Factory(object):
                         '''
 
                 #Build Encoder
-                '''
+                
                 Encoder1 = stack_encoder(input_reshape, 24)
                 Pool1 = unet_res_builder.Pool_layer(Encoder1) #512
 
@@ -245,19 +287,23 @@ class Factory(object):
                 Encoder6 = stack_encoder(Pool5, 768)
                 Pool6 = unet_res_builder.Pool_layer(Encoder6) #16
 
+                Encoder7 = stack_encoder(Pool6, 768)
+                Pool7 = unet_res_builder.Pool_layer(Encoder7) #8
+
                 #Center
-                Conv_center = unet_res_builder.Conv2d_layer(Pool6, stride=[1, 1, 1, 1], filters=768, Batch_norm=True, padding='SAME')
+                Conv_center = unet_res_builder.Conv2d_layer(Pool7, stride=[1, 1, 1, 1], filters=768, Batch_norm=True, padding='SAME')
                 #Pool_center = unet_res_builder.Pool_layer(Conv_center) #8
                 #Build Decoder
+                Decode1 = stack_decoder(Conv_center, Encoder7, out_filters=768, output_shape=[16, 16])
+                Decode2 = stack_decoder(Decode1, Encoder6, out_filters=768, output_shape=[32, 32])
+                Decode3 = stack_decoder(Decode2, Encoder5, out_filters=512, output_shape=[64, 64], infilter=768)
+                Decode4 = stack_decoder(Decode3, Encoder4, out_filters=256, output_shape=[128, 128], infilter=512)
+                Decode5 = stack_decoder(Decode4, Encoder3, out_filters=128, output_shape=[256, 256], infilter=256)
+                Decode6 = stack_decoder(Decode5, Encoder2, out_filters=64, output_shape=[512,512],  infilter=128)
+                Decode7 = stack_decoder(Decode6, Encoder1, out_filters=24, output_shape=[1024,1024], infilter=64)
 
-                Decode1 = stack_decoder(Conv_center, Encoder6, out_filters=512, output_shape=[16, 16])
-                Decode2 = stack_decoder(Decode1, Encoder5, out_filters=256, output_shape=[32, 32])
-                Decode3 = stack_decoder(Decode2, Encoder4, out_filters=128, output_shape=[64, 64])
-                Decode4 = stack_decoder(Decode3, Encoder3, out_filters=64, output_shape=[128, 128])
-                Decode5 = stack_decoder(Decode4, Encoder2, out_filters=24, output_shape=[256, 256])
-                Decode6 = stack_decoder(Decode5, Encoder1, out_filters=24, output_shape=[512, 512])
-
-                output = unet_res_builder.Conv2d_layer(Decode6, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
+                output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
+                
                 '''
                 Encoder1 = stack_encoder(input_reshape, 128)
                 Pool1 = unet_res_builder.Pool_layer(Encoder1) #64
@@ -281,25 +327,32 @@ class Factory(object):
                 output = unet_res_builder.Conv2d_layer(Decode4, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
                 unet_res_builder.variable_summaries(output, name='output')
                 unet_res_builder.variable_summaries(input_placeholder, name='input')
-                
+                '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
+                    weights = tf.reshape(weight_placeholder, shape=[-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                    w2 = weights
                     print(self.kwargs['Image_width']*self.kwargs['Image_height'])
                     logits = tf.reshape(output, shape= [-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
-                    #eps = tf.constant(value=1e-5)
-                    #sigmoid = tf.nn.sigmoid(logits) + eps
-                    Weighted_BCE_loss = tf.multiply(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder)),0.1)
-                    #Weighted_BCE_loss = tf.reduce_mean(output_placeholder * tf.log(sigmoid)) #Fix output and weight shape
-                    #Weighted_BCE_loss = tf.multiply(BCE_loss, weight_placeholder) + tf.multiply(tf.clip_by_value(logits, 0, 1e4), weight_placeholder)
-                    #Weighted_BCE_loss = tf.reduce_mean(Weighted_BCE_loss)
+                    x = tf.abs(logits)
+                    max_x = tf.maximum(logits,0)
+                    L = tf.log(1+ tf.exp(-x))
+                    Y= output_placeholder
+                    P = tf.nn.sigmoid(x)
+                    #focal_loss = tf.multiply(tf.multiply(tf.multiply(Y, tf.square(1 - P)),L) + tf.multiply(tf.multiply(1-Y, tf.square(P)),max_x+L),w2)
+                    Weighted_BCE_loss = tf.multiply(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder)),0.6) #0.8
+                    focal_loss = tf.multiply(tf.multiply(Y, tf.square(1 - P)),L) + tf.multiply(tf.multiply(1-Y, tf.square(P)),max_x+L)
+                    final_focal_loss = tf.reduce_mean(focal_loss)
 
                 #Dice Loss
                 
                 with tf.name_scope('Dice_Loss'):
                     eps = tf.constant(value=1e-5, name='eps')
                     sigmoid = tf.nn.sigmoid(logits,name='sigmoid') + eps
-                    intersection = tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection') + 1
-                    union = eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + tf.reduce_sum(output_placeholder,1,name='reduce_mask') + 1
+                    #intersection =tf.reduce_sum(sigmoid * output_placeholder*w2,axis=1,name='intersection') + 1
+                    intersection =tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection') + 1
+                    #union = eps + tf.reduce_sum(sigmoid*w2,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder*w2,1,name='reduce_mask') + 1)
+                    union = eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder,1,name='reduce_mask') + 1)
                     Dice_loss = 2 * intersection / (union)
                     Dice_loss = 1 - tf.reduce_mean(Dice_loss,name='diceloss')
                     unet_res_builder.variable_summaries(sigmoid, name='logits')
@@ -314,7 +367,7 @@ class Factory(object):
                 tf.add_to_collection(self.model_name + '_State', state_placeholder)
                 tf.add_to_collection(self.model_name + '_Loss', Weighted_BCE_loss)
                 tf.add_to_collection(self.model_name + '_Loss', Dice_loss)
-
+                #tf.add_to_collection(self.model_name + '_Loss', final_focal_loss)
                 return 'Segmentation'
 
     def Build_Inception_Resnet_v2a(self):
