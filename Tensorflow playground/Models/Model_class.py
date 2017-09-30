@@ -1,5 +1,7 @@
 from Model_builder.Build_factory import Factory
 import tensorflow as tf
+import numpy as np
+import cv2
 class Model_class(object):
     """This class contains the model architecture, optimizer and loss function"""
 
@@ -31,40 +33,39 @@ class Model_class(object):
             with tf.name_scope("Logit_Loss"):
                 loss = tf.get_collection(self.Model_name + '_Loss') #Getting losses from the graph
 
-            
+            '''
             with tf.name_scope("Regularization_Loss"):
                 regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
                 regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
                 loss.append(regularization_loss)
-            
+            '''
             self.loss = tf.add_n(loss)
             if self.kwargs['Summary']:
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, max_norm=0.0001, starter_learning_rate=0.005, decay_steps=5000, decay_rate=0.56): #0.0001
+    def Set_optimizer(self, max_norm=0.0002, starter_learning_rate=0.005, decay_steps=600000, decay_rate=0.56): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
-        learning_rate = tf.train.exponential_decay(0.0005, self.global_step, decay_steps=decay_steps, decay_rate=0.94, staircase=True)
-        #learning_rate = 0.1
+        learning_rate = tf.train.exponential_decay(0.0001, self.global_step, decay_steps=decay_steps, decay_rate=0.94, staircase=True)
+        #learning_rate = 0.0001
         tf.summary.scalar('Learning_rate', learning_rate)
 
         clip_min = - max_norm/learning_rate
         clip_max = max_norm/learning_rate
 
-        #self.optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.9, epsilon=1.0)
+        #self.optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, \
         self.optimizer = tf.train.AdamOptimizer(learning_rate) 
+        #self.optimizer= tf.train.GradientDescentOptimizer(learning_rate)
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
-
-
         #tf.clip_by_norm(x, 5.0,'Clip_by_norm')
         #clipped_gradients = list(map(lambda x: tf.clip_by_value(x,clip_min,clip_max,'Clip_by_value'), gradients))
         #clipped_gradients = list(map(lambda x: tf.clip_by_norm(x, 5.0), gradients))
         #clipped_gradients = tf.clip_by_value(gradients,clip_min,clip_max,'Clip_by_value')
-        clipped_gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+        clipped_gradients, _ = tf.clip_by_global_norm(gradients, 8.0)
         #tf.summary.histogram('clupg',clipped_gradients)
         #for gradient,num in enumerate(clipped_gradients):
             #tf.summary.histogram('Gradient_'+str(num), gradient)
-        self.train_step = self.optimizer.apply_gradients(zip(clipped_gradients,tvars), global_step=self.global_step)
+        self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
         #self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
 
 
@@ -85,12 +86,27 @@ class Model_class(object):
 
     def Construct_Accuracy_op(self):
         with tf.name_scope('accuracy'):
-            correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
-            false_images = tf.boolean_mask(self.model_dict['Reshaped_input'], tf.logical_not(correct_prediction))
-            tf.summary.image(name='False images', tensor=false_images)
-            self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-            tf.summary.scalar('accuracy', self.accuracy)
-            self.accuracy_op = True
+            if self.model_dict['Model_Type'] is 'Classification' :
+                correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
+                false_images = tf.boolean_mask(self.model_dict['Reshaped_input'], tf.logical_not(correct_prediction))
+                tf.summary.image(name='False images', tensor=false_images)
+                self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                tf.summary.scalar('accuracy', self.accuracy)
+                self.accuracy_op = True
+
+            elif self.model_dict['Model_Type'] is 'Segmentation' :
+                probs = tf.reshape((tf.sigmoid(self.model_dict['Output'])), shape=[ self.kwargs['Batch_size'], -1])
+                lab = tf.reshape(self.model_dict['Output_ph'], shape=[self.kwargs['Batch_size'], -1])
+                intersection = tf.reduce_sum(probs * lab, axis=1) + 1
+                union =  tf.reduce_sum(probs, 1) + tf.reduce_sum(lab, 1) + 1
+                tf.summary.image(name='Input images',tensor = self.model_dict['Reshaped_input'])
+                tf.summary.image(name='Mask',tensor = tf.reshape(self.model_dict['Output_ph'], [-1, self.kwargs['Image_width'], self.kwargs['Image_height'], 1]))
+                tf.summary.image(name='Weight',tensor = tf.reshape(self.model_dict['Weight_ph'], [-1, self.kwargs['Image_width'], self.kwargs['Image_height'], 1]))
+                tf.summary.image(name='Output',tensor = (tf.sigmoid(self.model_dict['Output'])))
+                self.accuracy = tf.reduce_mean(2 * intersection / (union))
+                tf.summary.scalar('accuracy', self.accuracy)
+                self.accuracy_op = True
+
             #tf.cond(self.accuracy > 0.92, lambda: tf.summary.image(name='False images', tensor=false_images), lambda: tf.summary.tensor_summary(name='correct_predictions', tensor=correct_prediction))
 
     def Construct_Writers(self, session=None):
@@ -116,8 +132,10 @@ class Model_class(object):
 
     def Construct_Predict_op(self):
         with tf.name_scope('Predict'):
-            self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
-
+            if self.model_dict['Model_Type'] is 'Classification':
+                self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
+            elif self.model_dict['Model_Type'] is 'Segmentation':
+                self.Predict_op = tf.sigmoid(self.model_dict['Output'])
 
     def Try_restore(self,session=None):
         #Get default session
@@ -140,7 +158,6 @@ class Model_class(object):
 
         #Construct Predict feed_dict
         predict_feed_dict = {**IO_predict_dict, **self.test_dict}
-
         out = session.run([self.Predict_op], feed_dict=predict_feed_dict)
         return(out)
 
@@ -156,6 +173,7 @@ class Model_class(object):
         self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
+        
         for step in range(iterations):
             step = session.run([self.global_step])[0]
             batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
