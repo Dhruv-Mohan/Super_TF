@@ -103,14 +103,17 @@ class Builder(object):
 
             return final_deconv
 
-    def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
+    def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=None, output_scale=2, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
         '''Resize + conv layer mentioned in
         https://distill.pub/2016/deconv-checkerboard/ '''
 
         with tf.name_scope('Conv_Resize') as scope:
             if batch_type is None:
                 batch_type=self.State
-
+            input_shape = input.get_shape().as_list()
+            output_shape = [input_shape[1] * output_scale , input_shape[2] * output_scale]
+            if filters is None:
+                filters= input_shape[3]
             upscaled_input = tf.image.resize_nearest_neighbor(images, output_shape)
             final_reconv = self.Conv2d_layer(input=upscaled_input, batch_type=batch_type, stride=stride, filters=filters, padding=padding, Batch_norm=Batch_norm,\
                 Activation=Activation, weight_decay=weight_decay, k_size=k_size)

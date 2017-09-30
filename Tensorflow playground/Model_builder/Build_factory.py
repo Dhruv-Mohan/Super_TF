@@ -47,7 +47,7 @@ class Factory(object):
                 def FRRU(Residual_stream, Pooling_stream, scale_factor, filters, res_filters=32):
                     with tf.name_scope('Full_Resolution_Unit'):
                         scale_dims = [1, scale_factor, scale_factor, 1]
-                        Pool, Ind = frnn_c_builder.Pool_layer(Residual_stream, k_size=scale_dims, stride=scale_dims, pooling_type='MAXIND')
+                        Pool = frnn_c_builder.Pool_layer(Residual_stream, k_size=scale_dims, stride=scale_dims)
 
                         Concat = frnn_c_builder.Concat([Pool, Pooling_stream])
 
@@ -58,7 +58,7 @@ class Factory(object):
                         #Res_connect = frnn_c_builder.Residual_connect([Conv0, Conv2])
                         Conv3 = frnn_c_builder.Conv2d_layer(Conv2, k_size=[1, 1], stride=[1, 1, 1, 1], filters=res_filters, Activation=False)
 
-                        Unpool = frnn_c_builder.Unpool_layer(Conv3, Ind, k_size = scale_dims)
+                        Unpool = frnn_c_builder.Conv_Resize_layer(Conv3, k_size=[3, 3], output_scale=scale_factor, Batch_norm=True )
                     Residual_stream_out = frnn_c_builder.Residual_connect([Residual_stream, Unpool], Activation=False)
                     Pooling_stream_out = Conv2
                     #return Conv2
@@ -97,7 +97,7 @@ class Factory(object):
                 Stem_pool = RU(Stem_pool, 48)
 
                 Residual_stream = frnn_c_builder.Conv2d_layer(Stem_pool, stride=[1, 1, 1, 1], k_size=[1, 1], filters=32, Batch_norm=True)
-                Pooling_stream, ind1 = frnn_c_builder.Pool_layer(Stem_pool, pooling_type='MAXIND')
+                Pooling_stream = frnn_c_builder.Pool_layer(Stem_pool)
 
                 #Encoder
                 scale_factor = 2
@@ -105,7 +105,7 @@ class Factory(object):
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
 
-                Pooling_stream, ind2 = frnn_c_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
+                Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor = 4
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
@@ -113,61 +113,61 @@ class Factory(object):
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
 
-                Pooling_stream, ind3 = frnn_c_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
+                Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor=8
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
 
-                Pooling_stream, ind4 = frnn_c_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
+                Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor=16
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
 
-                Pooling_stream, ind5 = frnn_c_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
+                Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor=32
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
-                Pooling_stream, ind6 = frnn_c_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
+                Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor=64
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Pooling_stream = Center_pool(input)
+
                 #Decoder
-                Pooling_stream = frnn_c_builder.Unpool_layer(Pooling_stream, ind6)
+                Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
+
                 scale_factor = 32
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
                 Pooling_stream = frnn_c_builder.Unpool_layer(Pooling_stream, ind5)
+
                 scale_factor = 16
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
 
 
-                Pooling_stream = frnn_c_builder.Unpool_layer(Pooling_stream, ind4)
+                Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
 
                 scale_factor = 8
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
 
                 
-                Pooling_stream = frnn_c_builder.Unpool_layer(Pooling_stream, ind3)
+                Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
 
                 scale_factor = 4
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
 
-                Pooling_stream = frnn_c_builder.Conv2d_layer(Pooling_stream, stride=[1, 1, 1, 1], k_size=[1, 1], filters=96, Batch_norm=True)
-                Pooling_stream = frnn_c_builder.Unpool_layer(Pooling_stream, ind2)
+                Pooling_stream = Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
 
                 scale_factor = 2
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
 
-                Pooling_stream = frnn_c_builder.Conv2d_layer(Pooling_stream, stride=[1, 1, 1, 1], k_size=[1, 1], filters=48, Batch_norm=True)
-                Pooling_stream = frnn_c_builder.Unpool_layer(Pooling_stream, ind1)
+                Pooling_stream = Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
 
                 RP_stream_merge = frnn_c_builder.Concat([Pooling_stream, Residual_stream])
                 Conv3 = frnn_c_builder.Conv2d_layer(RP_stream_merge, stride=[1, 1, 1, 1], k_size=[1, 1], filters=48, Batch_norm=True)
@@ -389,18 +389,18 @@ class Factory(object):
                     F1= -output_placeholder*tf.pow(1-P,2)*tf.log(P) -(1-output_placeholder)*tf.pow(P,2)*tf.log(1-P+1e-4)
                     tf.summary.image('FOCAL Loss', tf.reshape(F1,[1, 1024, 1024, 1]))
                     F1_count = tf.count_nonzero(tf.maximum(F1-0.1,0))
-                    final_focal_loss = tf.multiply(tf.reduce_sum(F1)/ tf.to_float(F1_count), 0.5)
+                    final_focal_loss = tf.multiply(tf.reduce_sum(F1)/ tf.to_float(F1_count), 0.1)
                     tf.summary.scalar('Count focal loss', F1_count)
                     tf.summary.scalar('Focal losssum ', tf.reduce_sum(F1))
                     #focal_loss = tf.multiply(tf.multiply(Y, tf.square(1 - P)),L) + tf.multiply(tf.multiply(1-Y, tf.square(P)),max_x+L)
                     #final_focal_loss = tf.reduce_mean(focal_loss)
                     #eps = tf.constant(value=1e-5)
                     #sigmoid = tf.nn.sigmoid(logits) + eps
-                    W_I = tf.multiply(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder),1)
+                    W_I = tf.multiply(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder),w2)
                     tf.summary.image('WCBE', tf.reshape(W_I, [1, 1024, 1024, 1]))
                     W_I_count = tf.count_nonzero(tf.maximum(W_I-0.1,0))
                     W_Is = tf.reduce_sum(W_I) / tf.to_float(W_I_count)
-                    Weighted_BCE_loss = tf.multiply(W_Is,0.5) #0.8
+                    Weighted_BCE_loss = tf.multiply(W_Is,0.1) #0.8
                     tf.summary.scalar('Count WCBE loss', W_I_count)
                     tf.summary.scalar('WCBE losssum ', tf.reduce_sum(W_I))
                     #Weighted_BCE_loss = tf.reduce_mean(output_placeholder * tf.log(sigmoid)) #Fix output and weight shape
