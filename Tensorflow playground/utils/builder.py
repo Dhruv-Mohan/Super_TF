@@ -93,6 +93,19 @@ class Builder(object):
                 final_deconv = self.Batch_norm(final_deconv, batch_type=batch_type)
 
             return final_deconv
+    def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
+        '''Resize + conv layer mentioned in
+        https://distill.pub/2016/deconv-checkerboard/ '''
+
+        with tf.name_scope('Conv_Resize') as scope:
+            if batch_type is None:
+                batch_type=self.State
+
+            upscaled_input = tf.image.resize_nearest_neighbor(images, output_shape)
+            final_reconv = self.Conv2d_layer(input=upscaled_input, batch_type=batch_type, stride=stride, filters=filters, padding=padding, Batch_norm=Batch_norm,\
+                Activation=Activation, weight_decay=weight_decay)
+
+            return final_reconv
 
     def Pool_layer(self, input, k_size=[1, 2, 2, 1], stride=[1, 2, 2, 1], padding='SAME', pooling_type='MAX'):
         with tf.name_scope('Pool') as scope:
