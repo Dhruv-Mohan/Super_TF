@@ -70,6 +70,15 @@ class Builder(object):
 
             return final_conv
 
+    def DConv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00004, D_rate=1):
+        with tf.name_scope('DConv') as scope:
+
+            dia_conv = tf.nn.atrous_conv2d(input, filters=filters, rate=D_rate, padding=padding)
+            final_diaconv = self.Conv2d_layer(input=dia_conv, batch_type=batch_type, stride=stride, filters=filters, padding=padding, Batch_norm=Batch_norm,\
+                Activation=Activation, weight_decay=weight_decay, k_size=k_size)
+
+            return final_diaconv
+
     def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
         with tf.name_scope('Deconv') as scope:
 
@@ -93,6 +102,7 @@ class Builder(object):
                 final_deconv = self.Batch_norm(final_deconv, batch_type=batch_type)
 
             return final_deconv
+
     def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
         '''Resize + conv layer mentioned in
         https://distill.pub/2016/deconv-checkerboard/ '''
@@ -103,7 +113,7 @@ class Builder(object):
 
             upscaled_input = tf.image.resize_nearest_neighbor(images, output_shape)
             final_reconv = self.Conv2d_layer(input=upscaled_input, batch_type=batch_type, stride=stride, filters=filters, padding=padding, Batch_norm=Batch_norm,\
-                Activation=Activation, weight_decay=weight_decay)
+                Activation=Activation, weight_decay=weight_decay, k_size=k_size)
 
             return final_reconv
 
