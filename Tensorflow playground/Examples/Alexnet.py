@@ -1,6 +1,6 @@
-from Models.Model_class import Model_class
+from Model_interface.Model import Model
 import tensorflow as tf
-from Dataset_IO.Dataset_reader_classification import Dataset_reader_classification
+from Dataset_IO.Classification.Dataset_reader_classification
 _SUMMARY_           = True
 _BATCH_SIZE_        = 48
 _IMAGE_WIDTH_       = 299
@@ -30,7 +30,7 @@ def main():
     dummy_reader.pre_process_image(writer_pre_proc)
 
     with tf.name_scope('AlexNet'):
-        Alexnet = Model_class(Model_name=_MODEL_NAME_, Summary=_SUMMARY_, \
+        Alexnet = Model(Model_name=_MODEL_NAME_, Summary=_SUMMARY_, \
             Batch_size=_BATCH_SIZE_, Image_width=_IMAGE_WIDTH_, Image_height=_IMAGE_HEIGHT_, Image_cspace=_IMAGE_CSPACE_, Classes=_CLASSES_, Save_dir=_SAVE_DIR_)
 
         Alexnet.Construct_Model()
