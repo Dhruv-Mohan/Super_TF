@@ -2,7 +2,7 @@ from Model_builder.Build_factory import Factory
 import tensorflow as tf
 import numpy as np
 import cv2
-class Model_class(object):
+class Model(object):
     """This class contains the model architecture, optimizer and loss function"""
 
 
