@@ -44,6 +44,33 @@ class Factory(object):
 
                         return frnn_c_builder.Residual_connect([input, Conv3])
 
+                def Center_pool(input, filters=768):
+                    ''' Dense dialations '''
+                    with tf.name_scope('Dense_Dialated_Center'):
+                        Dconv1 = frnn_c_builder.DConv_layer(input, filters=filters, Batch_norm=True, D_rate=1, Activation=False)
+                        Dense_connect1 = frnn_c_builder.Residual_connect([input, Dconv1])
+
+                        Dconv2 = frnn_c_builder.DConv_layer(Dense_connect1, filters=filters, Batch_norm=True, D_rate=2, Activation=False)
+                        Dense_connect2 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2])
+
+                        Dconv4 = frnn_c_builder.DConv_layer(Dense_connect2, filters=filters, Batch_norm=True, D_rate=4, Activation=False)
+                        Dense_connect3 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4 ])
+
+                        Dconv8 = frnn_c_builder.DConv_layer(Dense_connect3, filters=filters, Batch_norm=True, D_rate=8, Activation=False)
+                        Dense_connect4 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8])
+
+                        Dconv16 = frnn_c_builder.DConv_layer(Dense_connect4, filters=filters, Batch_norm=True, D_rate=16, Activation=False)
+                        Dense_connect5 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16])
+
+                        Dconv32 = frnn_c_builder.DConv_layer(Dense_connect5, filters=filters, Batch_norm=True, D_rate=32, Activation=False)
+                        Dense_connect6 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16, Dconv32])
+
+                        Scale_output = frnn_c_builder.Scale_activations(Dense_connect6,scaling_factor=0.2)
+
+                        return Scale_output
+
+
+
                 def FRRU(Residual_stream, Pooling_stream, scale_factor, filters, res_filters=32):
                     with tf.name_scope('Full_Resolution_Unit'):
                         scale_dims = [1, scale_factor, scale_factor, 1]
@@ -56,6 +83,7 @@ class Factory(object):
                         Conv2 = frnn_c_builder.Conv2d_layer(Conv1, stride=[1, 1, 1, 1], filters=filters, Batch_norm=True)
 
                         #Res_connect = frnn_c_builder.Residual_connect([Conv0, Conv2])
+
                         Conv3 = frnn_c_builder.Conv2d_layer(Conv2, k_size=[1, 1], stride=[1, 1, 1, 1], filters=res_filters, Activation=False)
 
                         Unpool = frnn_c_builder.Conv_Resize_layer(Conv3, k_size=[3, 3], output_scale=scale_factor, Batch_norm=True )
@@ -63,31 +91,6 @@ class Factory(object):
                     Pooling_stream_out = Conv2
                     #return Conv2
                     return Residual_stream_out, Pooling_stream_out
-
-                def Center_pool(input):
-                    ''' Dense dialations '''
-                    Dconv1 = frnn_c_builder.DConv_layer(input, filters=768, Batch_norm=True, D_rate=1, Activation=False)
-                    Dense_connect1 = frnn_c_builder.Residual_connect([input, Dconv1])
-
-                    Dconv2 = frnn_c_builder.DConv_layer(Dense_connect2, filters=768, Batch_norm=True, D_rate=2, Activation=False)
-                    Dense_connect2 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2])
-
-                    Dconv4 = frnn_c_builder.DConv_layer(Dense_connect3, filters=768, Batch_norm=True, D_rate=4, Activation=False)
-                    Dense_connect3 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4 ])
-
-                    Dconv8 = frnn_c_builder.DConv_layer(Dense_connect4, filters=768, Batch_norm=True, D_rate=8, Activation=False)
-                    Dense_connect4 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8])
-
-                    Dconv16 = frnn_c_builder.DConv_layer(Dense_connect5, filters=768, Batch_norm=True, D_rate=16, Activation=False)
-                    Dense_connect5 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16])
-
-                    Dconv32 = frnn_c_builder.DConv_layer(Dense_connect6, filters=768, Batch_norm=True, D_rate=32, Activation=False)
-                    Dense_connect6 = frnn_c_builder.Residual_connect([input, Dconv1, Dconv2. Dconv4, Dconv8, Dconv16, Dconv32])
-
-                    Scale_output = frnn_c_builder.Scale_activations(Dense_connect6, scale_factor=0.2)
-
-                    return Scale_output
-
                 #Model Construction
                 Stem = frnn_c_builder.Conv2d_layer(input_reshape, stride=[1, 1, 1, 1], k_size=[5, 5], filters=48, Batch_norm=True)
                 Stem = RU(Stem, 48)
@@ -104,14 +107,15 @@ class Factory(object):
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
+    
+    
 
                 Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor = 4
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+ 
 
                 Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
@@ -128,22 +132,24 @@ class Factory(object):
                 Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor=32
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384*2)
                 Pooling_stream = frnn_c_builder.Pool_layer(Pooling_stream)
 
                 scale_factor=64
-                Pooling_stream = Center_pool(input)
+                Pooling_stream = Center_pool(Pooling_stream)
 
                 #Decoder
                 Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
 
                 scale_factor = 32
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
-                Pooling_stream = frnn_c_builder.Unpool_layer(Pooling_stream, ind5)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
 
                 scale_factor = 16
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
 
@@ -166,7 +172,7 @@ class Factory(object):
                 scale_factor = 2
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
-
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=96)
                 Pooling_stream = Pooling_stream = frnn_c_builder.Conv_Resize_layer(Pooling_stream, k_size=[3, 3], Batch_norm=True )
 
                 RP_stream_merge = frnn_c_builder.Concat([Pooling_stream, Residual_stream])
@@ -176,49 +182,70 @@ class Factory(object):
                 Conv3 = RU(Conv3, 48)
 
 
-                
-                Upconv = frnn_c_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[self.kwargs['Image_width'], self.kwargs['Image_height']])
+                Upconv = frnn_c_builder.Conv_Resize_layer(Conv3, stride=[1,1,1,1],Batch_norm=True,Activation=False,k_size=[3, 3])
+                #Upconv = frnn_c_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[self.kwargs['Image_width'], self.kwargs['Image_height']])
                 Res_connect = frnn_c_builder.Residual_connect([Stem, Upconv])
                 Res_connect = RU(Res_connect, 48)
                 output = frnn_c_builder.Conv2d_layer(Res_connect, filters=1, stride=[1, 1, 1, 1], k_size=[1, 1], Batch_norm=True, Activation=False)
+                weights = tf.reshape(weight_placeholder, shape=[-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                logits = tf.reshape(output, shape= [-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
 
                 #Add loss and debug
-                with tf.name_scope('BCE_Loss'):
-                    weights = tf.reshape(weight_placeholder, shape=[-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
-                    w2 = weights
-                    print(self.kwargs['Image_width']*self.kwargs['Image_height'])
-                    logits = tf.reshape(output, shape= [-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                '''
+                with tf.name_scope('Focal_Loss'):
+                    
                     P = tf.minimum(tf.nn.sigmoid(logits)+1e-4,1.0) #safe for log sigmoid
-                    F1= -output_placeholder*tf.pow(1-P,2)*tf.log(P) -(1-output_placeholder)*tf.pow(P,2)*tf.log(1-P+1e-4)
+                    F1= -output_placeholder*tf.pow(1-P,5)*tf.log(P) -(1-output_placeholder)*tf.pow(P,5)*tf.log(1-P+1e-4)
                     tf.summary.image('FOCAL Loss', tf.reshape(F1,[1, 1024, 1024, 1]))
-                    F1_count = tf.count_nonzero(tf.maximum(F1-0.1,0))
-                    final_focal_loss = tf.multiply(tf.reduce_sum(F1)/ tf.to_float(F1_count), 0.5)
+                    F1_count = tf.count_nonzero(tf.maximum(F1-0.05,0))
+                    #final_focal_loss = tf.multiply(tf.reduce_mean(F1),1)
+                    final_focal_loss = tf.multiply(tf.reduce_sum(F1)/ tf.to_float(tf.maximum(F1_count, 1024*5)), 1)
                     tf.summary.scalar('Count focal loss', F1_count)
                     tf.summary.scalar('Focal losssum ', tf.reduce_sum(F1))
                     #focal_loss = tf.multiply(tf.multiply(Y, tf.square(1 - P)),L) + tf.multiply(tf.multiply(1-Y, tf.square(P)),max_x+L)
                     #final_focal_loss = tf.reduce_mean(focal_loss)
                     #eps = tf.constant(value=1e-5)
                     #sigmoid = tf.nn.sigmoid(logits) + eps
-                    W_I = tf.multiply(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder),1)
+                '''
+                
+                with tf.name_scope('BCE_Loss'):
+
+                    offset = 1e-5
+                    Threshold = 0.1
+                    Probs = tf.nn.sigmoid(logits)
+                    Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
+                    Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
+                    '''
+                    Probs_thresh = tf.abs(output_placeholder - Probs) #get most divergent pixels
+                    Probs_holes = tf.ceil(tf.maximum(Probs_thresh-Threshold, 0))
+                    W_I = tf.multiply(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder),Probs_holes)
+                    tf.summary.image('Prob_holes', tf.reshape(Probs_holes, [1, 1024, 1024, 1]))
+                    '''
+                    W_I = -output_placeholder * tf.log(Probs_processed) - (1-output_placeholder)*tf.log(Con_Probs_processed)
                     tf.summary.image('WCBE', tf.reshape(W_I, [1, 1024, 1024, 1]))
-                    W_I_count = tf.count_nonzero(tf.maximum(W_I-0.1,0))
-                    W_Is = tf.reduce_sum(W_I) / tf.to_float(W_I_count)
-                    Weighted_BCE_loss = tf.multiply(W_Is,0.5) #0.8
-                    tf.summary.scalar('Count WCBE loss', W_I_count)
-                    tf.summary.scalar('WCBE losssum ', tf.reduce_sum(W_I))
+                    '''
+                    W_I_count = tf.count_nonzero(Probs_holes)
+                    W_Is = tf.reduce_sum(W_I)  / tf.to_float(W_I_count)
+                    '''
+                    #Weighted_BCE_loss = tf.multiply(W_Is,1) #0.8
+                   
+                    Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.count_nonzero(W_I -0.01), tf.float32)
+                    #tf.summary.scalar('Count WCBE loss', W_I_count)
+                    #tf.summary.scalar('WCBE losssum ', tf.reduce_sum(W_I))
                     #Weighted_BCE_loss = tf.reduce_mean(output_placeholder * tf.log(sigmoid)) #Fix output and weight shape
                     #Weighted_BCE_loss = tf.multiply(BCE_loss, weight_placeholder) + tf.multiply(tf.clip_by_value(logits, 0, 1e4), weight_placeholder)
                     #Weighted_BCE_loss = tf.reduce_mean(Weighted_BCE_loss)
-
+                
                 #Dice Loss
                 
                 with tf.name_scope('Dice_Loss'):
 
                     eps = tf.constant(value=1e-5, name='eps')
-                    sigmoid = tf.nn.sigmoid(logits,name='sigmoid') + eps
-                    intersection =tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection')
-                    union = tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + tf.reduce_sum(output_placeholder,1,name='reduce_mask') + 1e-5
-                    Dice_loss = 2 * intersection / (union)
+                    sigmoid = tf.nn.sigmoid(output,name='sigmoid') + eps
+                    sigmoid =tf.reshape(sigmoid, shape= [-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                    intersection =sigmoid * output_placeholder 
+                    union = tf.reduce_sum(intersection,1) / ( tf.reduce_sum(sigmoid , 1, name='reduce_sigmoid') + tf.reduce_sum(output_placeholder ,1,name='reduce_mask') + 1e-5)
+                    Dice_loss = 2. *  (union)
                     Dice_loss = 1 - tf.reduce_mean(Dice_loss,name='diceloss')
                     frnn_c_builder.variable_summaries(sigmoid, name='logits')
                 
@@ -232,10 +259,10 @@ class Factory(object):
                 tf.add_to_collection(self.model_name + '_State', state_placeholder)
                 tf.add_to_collection(self.model_name + '_Loss', Weighted_BCE_loss)
                 tf.add_to_collection(self.model_name + '_Loss', Dice_loss)
-                tf.add_to_collection(self.model_name + '_Loss', final_focal_loss)
+                #tf.add_to_collection(self.model_name + '_Loss', final_focal_loss)
                 tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
-                tf.summary.scalar('Dice loss', Dice_loss)
-                tf.summary.scalar('Focal loss', final_focal_loss)
+                #tf.summary.scalar('Dice loss', Dice_loss)
+                #tf.summary.scalar('Focal loss', final_focal_loss)
                 return 'Segmentation'
 
     def Build_FRRN_A(self):
