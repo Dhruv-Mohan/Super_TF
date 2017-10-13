@@ -44,24 +44,25 @@ class Model_class(object):
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, max_norm=0.0002, starter_learning_rate=0.005, decay_steps=60000, decay_rate=0.56): #0.0001
+    def Set_optimizer(self, max_norm=0.0002, starter_learning_rate=0.005, decay_steps=100000, decay_rate=0.56): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
-        learning_rate = tf.train.exponential_decay(0.0001, self.global_step, decay_steps=decay_steps, decay_rate=0.5, staircase=True)
+        learning_rate = tf.train.exponential_decay(0.0001, self.global_step, decay_steps=decay_steps, decay_rate=0.84, staircase=True)
         #learning_rate = 0.0001
         tf.summary.scalar('Learning_rate', learning_rate)
 
         clip_min = - max_norm/learning_rate
         clip_max = max_norm/learning_rate
 
-        #self.optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, \
-        self.optimizer = tf.train.AdamOptimizer(learning_rate) 
+        
+        #self.optimizer = tf.train.AdamOptimizer(learning_rate) 
+        self.optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.01)
         #self.optimizer= tf.train.GradientDescentOptimizer(learning_rate)
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
         #tf.clip_by_norm(x, 5.0,'Clip_by_norm')
         #clipped_gradients = list(map(lambda x: tf.clip_by_value(x,clip_min,clip_max,'Clip_by_value'), gradients))
         #clipped_gradients = list(map(lambda x: tf.clip_by_norm(x, 5.0), gradients))
         #clipped_gradients = tf.clip_by_value(gradients,clip_min,clip_max,'Clip_by_value')
-        clipped_gradients, _ = tf.clip_by_global_norm(gradients, 8.0)
+        #clipped_gradients, _ = tf.clip_by_global_norm(gradients, 4.0)
         #tf.summary.histogram('clupg',clipped_gradients)
         #for gradient,num in enumerate(clipped_gradients):
             #tf.summary.histogram('Gradient_'+str(num), gradient)
@@ -97,8 +98,9 @@ class Model_class(object):
             elif self.model_dict['Model_Type'] is 'Segmentation' :
                 probs = tf.reshape((tf.sigmoid(self.model_dict['Output'])), shape=[ self.kwargs['Batch_size'], -1])
                 lab = tf.reshape(self.model_dict['Output_ph'], shape=[self.kwargs['Batch_size'], -1])
-                intersection = tf.reduce_sum(probs * lab, axis=1) + 1
-                union =  tf.reduce_sum(probs, 1) + tf.reduce_sum(lab, 1) + 1
+                probs = tf.ceil(probs - 0.5 + 1e-10)
+                intersection = tf.reduce_sum(probs * lab, axis=1) 
+                union =  tf.reduce_sum(probs, 1) + tf.reduce_sum(lab, 1) 
                 tf.summary.image(name='Input images',tensor = self.model_dict['Reshaped_input'])
                 tf.summary.image(name='Mask',tensor = tf.reshape(self.model_dict['Output_ph'], [-1, self.kwargs['Image_width'], self.kwargs['Image_height'], 1]))
                 tf.summary.image(name='Weight',tensor = tf.reshape(self.model_dict['Weight_ph'], [-1, self.kwargs['Image_width'], self.kwargs['Image_height'], 1]))
@@ -173,7 +175,7 @@ class Model_class(object):
         self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-        
+        #session.run(self.global_step.initializer)
         for step in range(iterations):
             step = session.run([self.global_step])[0]
             batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
