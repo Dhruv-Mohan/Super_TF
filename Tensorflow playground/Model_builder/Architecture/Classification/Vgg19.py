@@ -3,8 +3,8 @@ import tensorflow as tf
 
 
 
-def Build_vgg19(self):
-    '''Add paper and brief description'''
+def Build_vgg19():
+        '''Add paper and brief description'''
         with tf.name_scope('Vgg_model'):
             with Builder(**self.kwargs) as vgg19_builder:
                 input_placeholder = tf.placeholder(tf.float32, \

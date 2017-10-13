@@ -2,8 +2,8 @@ from utils.builder import Builder
 import tensorflow as tf
 
 
-def Build_Lenet(self):
-    ''' Add paper and brief description'''
+def Build_Lenet():
+        ''' Add paper and brief description'''
         with tf.name_scope('LeNeT_Model'):
             #with Builder(Summary=True,Batch_size=50,Image_width=28,Image_height=28,Image_cspace=1) as lenet_builder:
             with Builder(**self.kwargs) as lenet_builder:

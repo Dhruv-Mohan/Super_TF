@@ -1,9 +1,9 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-def Build_Unet_resnet(self):
-    '''Add paper and brief description'''
-        with tf.name_scope('Unet_resnet'):
+def Build_Unet1024():
+        '''Add paper and brief description'''
+        with tf.name_scope('Unet1024'):
             with Builder(**self.kwargs) as unet_res_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
                     shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')

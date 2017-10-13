@@ -1,7 +1,7 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-def Build_FRRN_A(self):
+def Build_FRRN_A():
         with tf.name_scope('FRRN_A'):
             with Builder(**self.kwargs) as frnn_a_builder:
                 input_placeholder = tf.placeholder(tf.float32, \

@@ -2,8 +2,8 @@ from utils.builder import Builder
 import tensorflow as tf
 
 
-def Build_Inception_Resnet_v2(self):
-    ''' Inception-resnet-v2 as described in the paper'''
+def Build_Inception_Resnet_v2():
+        ''' Inception-resnet-v2 as described in the paper'''
         with tf.name_scope('Inception_Resnet_v2_model'):
             with Builder(**self.kwargs) as inceprv2_builder:
                 input_placeholder = tf.placeholder(tf.float32, \

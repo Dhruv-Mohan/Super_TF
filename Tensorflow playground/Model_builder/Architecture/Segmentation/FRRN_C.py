@@ -1,7 +1,7 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-def Build_FRRN_C(self):
+def Build_FRRN_C():
         '''
         Same basic architecture as FRNN_A 
         Replaced unpooling layer with bilinear resizing 

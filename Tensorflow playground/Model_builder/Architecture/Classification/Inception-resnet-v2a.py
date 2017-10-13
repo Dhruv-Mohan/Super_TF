@@ -1,8 +1,8 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-def Build_Inception_Resnet_v2a(self):
-    ''' Inception_Resnet_v2 as written in tf.slim attach issue link'''
+def Build_Inception_Resnet_v2a():
+        ''' Inception_Resnet_v2 as written in tf.slim attach issue link'''
         with tf.name_scope('Inception_Resnet_v2a_model'):
             with Builder(**self.kwargs) as inceprv2a_builder:
                 input_placeholder = tf.placeholder(tf.float32, \

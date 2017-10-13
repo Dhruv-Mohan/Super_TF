@@ -3,8 +3,8 @@ import tensorflow as tf
 
 
 
-def Build_Alexnet(self):
-    '''Add paper and brief description'''
+def Build_Alexnet():
+        '''Add paper and brief description'''
         with tf.name_scope('Alexnet_model'):
             with Builder(**self.kwargs) as alexnet_builder:
                 input_placeholder = tf.placeholder(tf.float32, \

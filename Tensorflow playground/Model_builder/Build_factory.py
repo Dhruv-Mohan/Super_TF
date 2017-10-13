@@ -1,16 +1,14 @@
 from utils.builder import Builder
 import tensorflow as tf
 from Model_builder.Architecture.Classification import *
-from Model_builder.Architecture.Segmentation import *
-
+from Model_builder.Architecture.Segmentation import * 
 class Factory(object):
     """Factory class to build DNN Architectures"""
     #Look into adding a datastructure to keep track of last layer added to the graph
 
     def get_model(self):
-        #return self.Build_Lenet()
-        print('Build_'+self.model_name+'()')
-        return (eval('self.Build_'+self.model_name+'()'))
+        print('Building ' + self.model_name+'()')
+        return (eval(self.model_name + '.Build_' + self.model_name+'()'))
 
     def __init__(self, **kwargs):
         #TODO: WRITE ERROR HANDLER AND PARSER 
