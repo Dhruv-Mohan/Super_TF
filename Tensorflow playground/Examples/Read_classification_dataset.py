@@ -1,5 +1,5 @@
 import tensorflow as tf
-from Dataset_IO.Dataset_reader_classification import Dataset_reader_classification
+from Dataset_IO.Classification.Dataset_reader_classification import Dataset_reader_classification
 
 _IMAGE_WIDTH_       = 299
 _IMAGE_HEIGHT_      = 299

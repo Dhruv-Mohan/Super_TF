@@ -1,5 +1,5 @@
 import tensorflow as tf
-from Dataset_IO.Dataset_writer_classification import Dataset_writer_classification
+from Dataset_IO.Classification.Dataset_writer_classification import Dataset_writer_classification
 
 
 _IMAGE_WIDTH_       = 299

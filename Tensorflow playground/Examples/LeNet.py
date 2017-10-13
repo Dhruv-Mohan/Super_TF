@@ -1,5 +1,5 @@
 
-from Models.Model_class import Model_class
+from Model_interface.Model import Model
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 
@@ -25,7 +25,7 @@ def main():
 
     #Construct model
     with tf.name_scope('LeNeT'):
-        Simple_DNN = Model_class(Model_name=_MODEL_NAME_, Summary=_SUMMARY_, \
+        Simple_DNN = Model(Model_name=_MODEL_NAME_, Summary=_SUMMARY_, \
             Batch_size=_BATCH_SIZE_, Image_width=_IMAGE_WIDTH_, Image_height=_IMAGE_HEIGHT_, Image_cspace=_IMAGE_CSPACE_, Classes=_CLASSES_, Save_dir=_SAVE_DIR_)
 
         Simple_DNN.Construct_Model()
