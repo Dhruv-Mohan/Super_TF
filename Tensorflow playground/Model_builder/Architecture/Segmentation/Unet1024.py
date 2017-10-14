@@ -142,9 +142,7 @@ def Build_Unet1024(kwargs):
                 with tf.name_scope('Dice_Loss'):
                     eps = tf.constant(value=1e-5, name='eps')
                     sigmoid = tf.nn.sigmoid(logits,name='sigmoid') + eps
-                    #intersection =tf.reduce_sum(sigmoid * output_placeholder*w2,axis=1,name='intersection') + 1
                     intersection =tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection') + 1
-                    #union = eps + tf.reduce_sum(sigmoid*w2,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder*w2,1,name='reduce_mask') + 1)
                     union = eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder,1,name='reduce_mask') + 1)
                     Dice_loss = 2 * intersection / (union)
                     Dice_loss = 1 - tf.reduce_mean(Dice_loss,name='diceloss')
@@ -160,6 +158,5 @@ def Build_Unet1024(kwargs):
                 tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_Loss', Weighted_BCE_loss)
                 tf.add_to_collection(kwargs['Model_name'] + '_Loss', Dice_loss)
-                #tf.add_to_collection(kwargs['Model_name'] + '_Loss', final_focal_loss)
                 return 'Segmentation'
 
