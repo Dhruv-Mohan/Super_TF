@@ -3,17 +3,17 @@ import tensorflow as tf
 
 
 
-def Build_Alexnet():
+def Build_Alexnet(kwargs):
         '''Add paper and brief description'''
         with tf.name_scope('Alexnet_model'):
-            with Builder(**self.kwargs) as alexnet_builder:
+            with Builder(**kwargs) as alexnet_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
+                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
+                output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 state_placeholder = tf.placeholder(tf.bool, name="State")
 
-                input_reshape = alexnet_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+                input_reshape = alexnet_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
 
                 #Setting control params
                 alexnet_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
@@ -41,10 +41,11 @@ def Build_Alexnet():
                 fc2 = alexnet_builder.FC_layer(drop1, filters=4096)
                 drop2 = alexnet_builder.Dropout_layer(fc2)
 
-                output = alexnet_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
+                output = alexnet_builder.FC_layer(drop2, filters=kwargs['Classes'], readout=True)
                 #tf.summary.image('Inputs', input_reshape)
                 #tf.summary.tensor_summary('Outputs', output)
                 Alexnet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'State' : state_placeholder}
-                return(Alexnet_dict)
+                
+                return 'Classification'
 
 

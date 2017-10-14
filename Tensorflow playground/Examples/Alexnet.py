@@ -1,6 +1,8 @@
 from Model_interface.Model import Model
 import tensorflow as tf
 from Dataset_IO.Classification.Dataset_reader_classification
+
+
 _SUMMARY_           = True
 _BATCH_SIZE_        = 48
 _IMAGE_WIDTH_       = 299

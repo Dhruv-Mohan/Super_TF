@@ -1,20 +1,20 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-def Build_Unet1024():
+def Build_Unet1024(kwargs):
         '''Add paper and brief description'''
         with tf.name_scope('Unet1024'):
-            with Builder(**self.kwargs) as unet_res_builder:
+            with Builder(**kwargs) as unet_res_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
+                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
                 output_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']], name='Mask')
+                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Mask')
                 weight_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']], name='Weight')
+                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Weight')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 state_placeholder = tf.placeholder(tf.string, name="State")
                 input_reshape = unet_res_builder.Reshape_input(input_placeholder, \
-                    width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+                    width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
                 #batch_size = tf.slice(tf.shape(input_placeholder),[0],[1])
                 #Setting control params
                 unet_res_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
@@ -123,10 +123,10 @@ def Build_Unet1024():
                 '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
-                    weights = tf.reshape(weight_placeholder, shape=[-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                    weights = tf.reshape(weight_placeholder, shape=[-1, kwargs['Image_width']*kwargs['Image_height']])
                     w2 = weights
-                    print(self.kwargs['Image_width']*self.kwargs['Image_height'])
-                    logits = tf.reshape(output, shape= [-1, self.kwargs['Image_width']*self.kwargs['Image_height']])
+                    print(kwargs['Image_width']*kwargs['Image_height'])
+                    logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
                     x = tf.abs(logits)
                     max_x = tf.maximum(logits,0)
                     L = tf.log(1+ tf.exp(-x))
@@ -151,15 +151,15 @@ def Build_Unet1024():
                     unet_res_builder.variable_summaries(sigmoid, name='logits')
                 
                 #Graph Exports
-                tf.add_to_collection(self.model_name + '_Input_ph', input_placeholder)
-                tf.add_to_collection(self.model_name + '_Input_reshape', input_reshape)
-                tf.add_to_collection(self.model_name + '_Weight_ph', weight_placeholder)
-                tf.add_to_collection(self.model_name + '_Output_ph', output_placeholder)
-                tf.add_to_collection(self.model_name + '_Output', output)
-                tf.add_to_collection(self.model_name + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(self.model_name + '_State', state_placeholder)
-                tf.add_to_collection(self.model_name + '_Loss', Weighted_BCE_loss)
-                tf.add_to_collection(self.model_name + '_Loss', Dice_loss)
-                #tf.add_to_collection(self.model_name + '_Loss', final_focal_loss)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
+                tf.add_to_collection(kwargs['Model_name'] + '_Weight_ph', weight_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
+                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Loss', Weighted_BCE_loss)
+                tf.add_to_collection(kwargs['Model_name'] + '_Loss', Dice_loss)
+                #tf.add_to_collection(kwargs['Model_name'] + '_Loss', final_focal_loss)
                 return 'Segmentation'
 

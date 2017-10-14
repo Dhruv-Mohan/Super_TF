@@ -3,15 +3,15 @@ import tensorflow as tf
 
 
 
-def Build_vgg19():
+def Build_vgg19(kwargs):
         '''Add paper and brief description'''
         with tf.name_scope('Vgg_model'):
-            with Builder(**self.kwargs) as vgg19_builder:
+            with Builder(**kwargs) as vgg19_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
+                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
+                output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                input_reshape = vgg19_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+                input_reshape = vgg19_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
 
                 #Setting control params
                 vgg19_builder.control_params(Dropout_control=dropout_prob_placeholder)
@@ -55,10 +55,11 @@ def Build_vgg19():
                 fc2 = vgg19_builder.FC_layer(drop1, filters=4096)
                 drop2 = vgg19_builder.Dropout_layer(fc2)
 
-                output = vgg19_builder.FC_layer(drop2, filters=self.kwargs['Classes'], readout=True)
+                output = vgg19_builder.FC_layer(drop2, filters=kwargs['Classes'], readout=True)
 
                 VGG19_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder }
-                return(VGG19_dict)
+                
+                return 'Classification'
 
 
 

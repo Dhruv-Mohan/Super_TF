@@ -23,7 +23,7 @@ class Factory(object):
     def get_model(self):
 
         print('Building ' + self.model_name+'()')
-        return (eval('Build_' + self.model_name+'()'))
+        return (eval('Build_' + self.model_name+'(self.kwargs)'))
 
     def __init__(self, **kwargs):
         #TODO: WRITE ERROR HANDLER AND PARSER 

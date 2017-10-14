@@ -1,16 +1,16 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-def Build_Inception_Resnet_v2a():
+def Build_Inception_Resnet_v2a(kwargs):
         ''' Inception_Resnet_v2 as written in tf.slim attach issue link'''
         with tf.name_scope('Inception_Resnet_v2a_model'):
-            with Builder(**self.kwargs) as inceprv2a_builder:
+            with Builder(**kwargs) as inceprv2a_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
+                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
+                output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = inceprv2a_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+                input_reshape = inceprv2a_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
 
                 #Setting control params
                 inceprv2a_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
@@ -147,13 +147,13 @@ def Build_Inception_Resnet_v2a():
                     model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1536, Batch_norm=True)
                     model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')
                     drop1 = inceprv2a_builder.Dropout_layer(model_avg_pool)
-                    output = inceprv2a_builder.FC_layer(drop1, filters=self.kwargs['Classes'], readout=True)
+                    output = inceprv2a_builder.FC_layer(drop1, filters=kwargs['Classes'], readout=True)
                 #AuxLogits
                 with tf.name_scope('Auxlogits'):
                     model_aux_avg_pool = inceprv2a_builder.Pool_layer(Block_17, k_size=[1, 5, 5, 1], stride=[1, 3, 3, 1], padding='VALID', pooling_type='AVG')
                     model_aux_conv1 = inceprv2a_builder.Conv2d_layer(model_aux_avg_pool, k_size=[1, 1], stride=[1, 1, 1, 1], filters=128, Batch_norm=True)
                     model_aux_conv2 = inceprv2a_builder.Conv2d_layer(model_aux_conv1, k_size=[5, 5], stride=[1, 1, 1, 1], padding='VALID', filters=768, Batch_norm=True)
-                    model_aux_logits = inceprv2a_builder.FC_layer(model_aux_conv2, filters=self.kwargs['Classes'], readout=True)
+                    model_aux_logits = inceprv2a_builder.FC_layer(model_aux_conv2, filters=kwargs['Classes'], readout=True)
 
                 #Logit Loss
                 with tf.name_scope('Cross_entropy_loss'):
@@ -164,17 +164,19 @@ def Build_Inception_Resnet_v2a():
                     softmax_auxlogit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=model_aux_logits)) * 0.6
 
                 #Adding collections to graph
-                tf.add_to_collection(self.model_name + '_Endpoints', Block_35)
-                tf.add_to_collection(self.model_name + '_Endpoints', Block_17)
-                tf.add_to_collection(self.model_name + '_Endpoints', Block_8)
-                tf.add_to_collection(self.model_name + '_Input_ph', input_placeholder)
-                tf.add_to_collection(self.model_name + '_Input_reshape', input_reshape)
-                tf.add_to_collection(self.model_name + '_Output_ph', output_placeholder)
-                tf.add_to_collection(self.model_name + '_Output', output)
-                tf.add_to_collection(self.model_name + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(self.model_name + '_State', state_placeholder)
-                tf.add_to_collection(self.model_name + '_Loss', softmax_logit_loss)
-                tf.add_to_collection(self.model_name + '_Loss', softmax_auxlogit_loss)
+                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_35)
+                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_17)
+                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_8)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
+                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_logit_loss)
+                tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_auxlogit_loss)
+
+                return 'Classification'
 
 
 

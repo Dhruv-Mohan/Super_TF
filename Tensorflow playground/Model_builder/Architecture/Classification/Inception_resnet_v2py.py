@@ -2,16 +2,16 @@ from utils.builder import Builder
 import tensorflow as tf
 
 
-def Build_Inception_Resnet_v2():
+def Build_Inception_Resnet_v2(kwargs):
         ''' Inception-resnet-v2 as described in the paper'''
         with tf.name_scope('Inception_Resnet_v2_model'):
-            with Builder(**self.kwargs) as inceprv2_builder:
+            with Builder(**kwargs) as inceprv2_builder:
                 input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, self.kwargs['Image_width']*self.kwargs['Image_height']*self.kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, shape=[None, self.kwargs['Classes']], name='Output')
+                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
+                output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
                 dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = inceprv2_builder.Reshape_input(input_placeholder, width=self.kwargs['Image_width'], height=self.kwargs['Image_height'], colorspace= self.kwargs['Image_cspace'])
+                input_reshape = inceprv2_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
 
                 #Setting control params
                 inceprv2_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
@@ -167,25 +167,21 @@ def Build_Inception_Resnet_v2():
                 #DROPOUT 
                 drop1 = inceprv2_builder.Dropout_layer(average_pooling)
                 #OUTPUT
-                output = inceprv2_builder.FC_layer(drop1, filters=self.kwargs['Classes'], readout=True)
+                output = inceprv2_builder.FC_layer(drop1, filters=kwargs['Classes'], readout=True)
                 #LOGIT LOSS
                 with tf.name_scope('Cross_entropy_loss'):
                     softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
 
                 #Adding collections to graph
-                tf.add_to_collection(self.model_name + '_Endpoints', inception_A5)
-                tf.add_to_collection(self.model_name + '_Endpoints', inception_B10)
-                tf.add_to_collection(self.model_name + '_Endpoints', inception_C5)
-                tf.add_to_collection(self.model_name + '_Input_ph', input_placeholder)
-                tf.add_to_collection(self.model_name + '_Input_reshape', input_reshape)
-                tf.add_to_collection(self.model_name + '_Output_ph', output_placeholder)
-                tf.add_to_collection(self.model_name + '_Output', output)
-                tf.add_to_collection(self.model_name + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(self.model_name + '_State', state_placeholder)
-                tf.add_to_collection(self.model_name + '_Loss', softmax_logit_loss)
+                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', inception_A5)
+                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', inception_B10)
+                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', inception_C5)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
+                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_logit_loss)
 
-                #Inception_resnetv2_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder, 'State' : state_placeholder}
-                return dropout_prob_placeholder
-                #return Inception_resnetv2_dict
-
-
+                return 'Classification'
