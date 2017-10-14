@@ -268,3 +268,17 @@ __pycache__/
 /Tensorflow playground
 /Tensorflow playground
 /2.gif
+/Super_TF/MNIST_data
+/Super_TF/10245sub.csv
+/Super_TF/1024submission.csv
+*.png
+/Super_TF/Avctet_mean.proto
+/Super_TF/cifar_train.tfrecords
+/Super_TF/d.txt
+*.tfercords
+*.tfrecords
+*.txt
+*.csv
+/Super_TF/playgrount2.py
+/Super_TF/Tensorflow_playground.py
+/Super_TF/test.protobuf
