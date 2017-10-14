@@ -131,19 +131,19 @@ def Build_Inception_Resnet_v2(kwargs):
                         residual_out = inceprv2_builder.Residual_connect([input, conv2_scale])
                         
                         return residual_out
-                #MODEL CONSTRUCTION
+                #Model Construction
 
-                #STEM
+                #Stem
                 model_stem = stem(input_reshape)
-                #5x INCEPTION RESNET A
+                #5x Inception Resnet A
                 inception_A1 = inception_resnet_A(model_stem)
                 inception_A2 = inception_resnet_A(inception_A1)
                 inception_A3 = inception_resnet_A(inception_A2)
                 inception_A4 = inception_resnet_A(inception_A3)
                 inception_A5 = inception_resnet_A(inception_A4)
-                #REUCTION A
+                #Reduction A
                 model_reduction_A = reduction_A(inception_A5)
-                #10X INCEPTION RESNET B
+                #10X Inception Resnet B
                 inception_B1 = inception_resnet_B(model_reduction_A) #Don't know if i'm missing something or now, but reduction A's output for inception resnetv2 is a tensor of depth 1152
                 inception_B2 = inception_resnet_B(inception_B1)
                 inception_B3 = inception_resnet_B(inception_B2)
@@ -154,21 +154,21 @@ def Build_Inception_Resnet_v2(kwargs):
                 inception_B8 = inception_resnet_B(inception_B7)
                 inception_B9 = inception_resnet_B(inception_B8)
                 inception_B10 = inception_resnet_B(inception_B9)
-                #REDUCTION B
+                #Reduction B
                 model_reduction_B = reduction_B(inception_B10)
-                #5X INCEPTION RESNET C
+                #5X Inception Resnet C
                 inception_C1 = inception_resnet_C(model_reduction_B)
                 inception_C2 = inception_resnet_C(inception_C1)
                 inception_C3 = inception_resnet_C(inception_C2)
                 inception_C4 = inception_resnet_C(inception_C3)
                 inception_C5 = inception_resnet_C(inception_C4)
-                #AVERAGE POOLING
+                #Average Pooling
                 average_pooling = inceprv2_builder.Pool_layer(inception_C5, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')
-                #DROPOUT 
+                #Dropout
                 drop1 = inceprv2_builder.Dropout_layer(average_pooling)
-                #OUTPUT
+                #Output
                 output = inceprv2_builder.FC_layer(drop1, filters=kwargs['Classes'], readout=True)
-                #LOGIT LOSS
+                #Logit Loss
                 with tf.name_scope('Cross_entropy_loss'):
                     softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
 

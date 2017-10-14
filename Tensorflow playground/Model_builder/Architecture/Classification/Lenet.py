@@ -21,6 +21,14 @@ def Build_Lenet(kwargs):
                 fc1 = lenet_builder.FC_layer(pool2);
                 output = lenet_builder.FC_layer(fc1, filters=kwargs['Classes'], readout=True)
 
-                Lenet_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output}
-                
+                #Logit Loss
+                with tf.name_scope('Cross_entropy_loss'):
+                    softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
+
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
+                tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_logit_loss)
+
                 return 'Classification'

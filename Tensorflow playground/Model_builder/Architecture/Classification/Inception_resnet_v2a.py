@@ -125,16 +125,16 @@ def Build_Inception_Resnet_v2a(kwargs):
                         concat = inceprv2a_builder.Concat([conv2a_split1, conv2b_split1, conv3c_split1, pool1d_split1])
                         return concat
 
-                #MODEL CONSTRUCTION
+                #Model Construction
 
-                #STEM
+                #Stem
                 Block_35 = stem(input_reshape)
-                #INCEPTION 35x35
+                #Inception 35x35
                 for index in range(10):
                     Block_35 = incep_block35(Block_35, scale=0.17)
                 #Reduction 35->17
                 Block_17 = ReductionA(Block_35)
-                #INCEPTION 17x17
+                #Inception 17x17
                 for index in range(20):
                     Block_17 = incep_block17(Block_17, scale=0.1)
                 #Reduction 17->8

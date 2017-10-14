@@ -16,7 +16,7 @@ def Build_vgg19(kwargs):
                 #Setting control params
                 vgg19_builder.control_params(Dropout_control=dropout_prob_placeholder)
 
-                #FEATURE EXTRACTION
+                #Feature Extraction
                 conv1a = vgg19_builder.Conv2d_layer(input_reshape, filters=64)
                 conv1b = vgg19_builder.Conv2d_layer(conv1a, filters=64)
 
@@ -48,7 +48,7 @@ def Build_vgg19(kwargs):
 
                 pool5 = vgg19_builder.Pool_layer(conv5d)
 
-                #DENSELY CONNECTED
+                #Densely Connected
                 fc1 = vgg19_builder.FC_layer(pool5, filters=4096)
                 drop1 = vgg19_builder.Dropout_layer(fc1)
 
@@ -57,7 +57,18 @@ def Build_vgg19(kwargs):
 
                 output = vgg19_builder.FC_layer(drop2, filters=kwargs['Classes'], readout=True)
 
-                VGG19_dict = {'Input_ph': input_placeholder, 'Output_ph': output_placeholder, 'Output': output, 'Dropout_prob_ph': dropout_prob_placeholder }
+                #Logit Loss
+                with tf.name_scope('Cross_entropy_loss'):
+                    softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
+
+                #Adding collections to graph
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
+                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_logit_loss)
                 
                 return 'Classification'
 
