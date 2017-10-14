@@ -265,4 +265,4 @@ class Builder(object):
             tf.summary.scalar(name + 'max', tf.reduce_max(var))
             tf.summary.scalar(name + 'min', tf.reduce_min(var))
             tf.summary.histogram(name + 'histogram', var)
-    
+    #TODO: Add losses 
