@@ -5,7 +5,7 @@ Simple framework to construct machine learning models with tensorflow
 SuperTF was initially conceived as a means to get familiar with Tensorflow by constructing machine learning models and executing the Tensorflow Tutorials
 
 I have expanded SuperTF overtime and now it has a suite of tools to help in:
-- Generation of  datasets as tf.records files (Currently supports Semantic segmentation and Classification)
+- Generation of  datasets as tfrecords files (Currently supports Semantic segmentation and Classification)
 - Rapid Prototyping of Deep learning models
 - Network and Data visualization via tensorboard
 - Session management for extended training sessions
@@ -16,6 +16,7 @@ Please refer to the examples for:
 - [Classification dataset reading](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Examples/Read_classification_dataset.py)
 - [Training LeNet](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Examples/LeNet.py)
 - [Training AlexNet](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Examples/AlexNet.py)
+  (Scemantic segmentation examples will be added shortly)
 
 
 ## Included Network Architectures
