@@ -33,12 +33,12 @@ I’ve added a several neural network architectures:
  
 
 ### Custom:
-I've edited and added to certain network architectures to fullfill a certain niche or to improve their performance these networks are:
+I've edited and added to certain network architectures to fulfill a certain niche or to improve their performance. These networks are:
 - [Unet1024](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/Unet1024.py) - [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
   
-  Unet1024 is a simple extension of the orginal Unet architecture, the network accepcts an image of size 1024 x 1024 and has 7 pairs of ecoder-decoder pairs
+  Unet1024 is a simple extension of the orginal Unet architecture, the network accepts an image of size 1024 x 1024 and has 7 encoder-decoder pairs.
   
 - [Full-Resolution Residual Network-C](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/FRRN_C.py) - [Full-Resolution Residual Networks for Semantic Segmentation in Street Scenes](https://arxiv.org/abs/1611.08323)
  
   FRRN-C is build upon FRRN-A. Here the center Full-Resolution residual block is replaced by densely conected block of dialated convolutions.
- Moreoever the Full-Resolution Residual Network is enclosed in an ecoder decoder pair with doubles the input and output resolution. 
+ Moreover the Full-Resolution Residual Network is enclosed in an encoder decoder pair with doubles the input and output resolution. 
