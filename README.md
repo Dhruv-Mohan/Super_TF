@@ -26,7 +26,7 @@ I’ve added a several neural network architectures:
 - [Vgg16](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Classification/Vgg16.py) - [Very Deep Convolutional Networks for Large-Scale Image Recognition](https://arxiv.org/abs/1409.1556)
 - [Vgg19](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Classification/Vgg19.py) - [Very Deep Convolutional Networks for Large-Scale Image Recognition](https://arxiv.org/abs/1409.1556)
 - [Inception-resnet-v2-paper](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Classification/Inception_resnet_v2py.py) - [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning](https://arxiv.org/abs/1602.07261)
-- [Inception-resnet-v2-published](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Classification/Inception_resnet_v2a.py) - [Inception-v4, Inception-ResNet and the Impact of Residual Connections on Learning](https://arxiv.org/abs/1602.07261)
+- [Inception-resnet-v2-published](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Classification/Inception_resnet_v2a.py) - [Improving Inception and Image Classification in TensorFlow](https://research.googleblog.com/2016/08/improving-inception-and-image.html)
 
 ### Segmentation:
 - [Full-Resolution Residual Network-A](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/FRRN_A.py) - [Full-Resolution Residual Networks for Semantic Segmentation in Street Scenes](https://arxiv.org/abs/1611.08323)
