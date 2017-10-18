@@ -76,8 +76,8 @@ def Build_FRRN_A(kwargs):
                 Pooling_stream, ind3 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
 
                 scale_factor=8
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
+                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
 
                 Pooling_stream, ind4 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
 
@@ -85,29 +85,9 @@ def Build_FRRN_A(kwargs):
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
 
-                Pooling_stream, ind5 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
 
-                scale_factor=32
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
-                Pooling_stream, ind6 = frnn_a_builder.Pool_layer(Pooling_stream, pooling_type='MAXIND')
-
-                scale_factor=64
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
                 #Decoder
-                Pooling_stream = frnn_a_builder.Unpool_layer(Pooling_stream, ind6)
-                scale_factor = 32
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=384)
-                Pooling_stream = frnn_a_builder.Unpool_layer(Pooling_stream, ind5)
-                scale_factor = 16
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-                Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
-
-
                 Pooling_stream = frnn_a_builder.Unpool_layer(Pooling_stream, ind4)
-
                 scale_factor = 8
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
                 Residual_stream, Pooling_stream = FRRU(Residual_stream=Residual_stream, Pooling_stream=Pooling_stream, scale_factor=scale_factor, filters=192)
