@@ -28,44 +28,54 @@ class Model(object):
             self.train_dict[self.model_dict[key]] = value
 
 
-    def Set_loss(self):
+    def Set_loss(self, Reg_loss=None):
         with tf.name_scope("Loss"):
             with tf.name_scope("Logit_Loss"):
                 loss = tf.get_collection(self.Model_name + '_Loss') #Getting losses from the graph
 
-            '''
-            with tf.name_scope("Regularization_Loss"):
-                regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-                regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
-                loss.append(regularization_loss)
-            '''
+            if Reg_loss is None:
+                with tf.name_scope("Regularization_Loss"):
+                    regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+                    regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
+                    loss.append(regularization_loss)
+            
             self.loss = tf.add_n(loss)
             if self.kwargs['Summary']:
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, max_norm=0.0002, starter_learning_rate=0.005, decay_steps=100000, decay_rate=0.56): #0.0001
+    def Set_optimizer(self, starter_learning_rate=0.0001, decay_steps=100000, decay_rate=0.84, Fixed_LR=None, Optimizer='RMS', Optimizer_params=None, Gradient_norm=None): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
-        learning_rate = tf.train.exponential_decay(0.0001, self.global_step, decay_steps=decay_steps, decay_rate=0.84, staircase=True)
-        #learning_rate = 0.0001
-        tf.summary.scalar('Learning_rate', learning_rate)
 
+        if Fixed_LR is None:
+            learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=True)
+        else:
+            learning_rate = starter_learning_rate
+        if self.kwargs['Summary']:
+            tf.summary.scalar('Learning_rate', learning_rate)
+        '''
         clip_min = - max_norm/learning_rate
         clip_max = max_norm/learning_rate
+        '''
+        #Select Optimizer
+        if Optimizer = 'ADAM':
+            if Optimizer_params is None:
+                self.optimizer = tf.train.AdamOptimizer(learning_rate)
+            else:
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=Optimizer_params['beta1'], beta2=Optimizer_params['beta2'], epsilon=Optimizer_params['epsilon'])
+        elif Optimizer = 'RMS':
+            if Optimizer_params is None:
+                self.optimizer = tf.train.RMSPropOptimizer(learning_rate)
+            else:
+                self.optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=Optimizer_params['decay'], momentum=Optimizer_params['momentum'], epsilon=Optimizer_params['epsilon'])
+        elif Optimizer = 'SGD':
+                self.optimizer= tf.train.GradientDescentOptimizer(learning_rate)
 
-        
-        #self.optimizer = tf.train.AdamOptimizer(learning_rate) 
-        self.optimizer = tf.train.RMSPropOptimizer(learning_rate, decay=0.9, momentum=0.01)
-        #self.optimizer= tf.train.GradientDescentOptimizer(learning_rate)
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
-        #tf.clip_by_norm(x, 5.0,'Clip_by_norm')
-        #clipped_gradients = list(map(lambda x: tf.clip_by_value(x,clip_min,clip_max,'Clip_by_value'), gradients))
-        #clipped_gradients = list(map(lambda x: tf.clip_by_norm(x, 5.0), gradients))
-        #clipped_gradients = tf.clip_by_value(gradients,clip_min,clip_max,'Clip_by_value')
-        #clipped_gradients, _ = tf.clip_by_global_norm(gradients, 4.0)
-        #tf.summary.histogram('clupg',clipped_gradients)
-        #for gradient,num in enumerate(clipped_gradients):
-            #tf.summary.histogram('Gradient_'+str(num), gradient)
+        
+        if Gradient_norm is not None:
+            gradients, _ = tf.clip_by_global_norm(gradients, Gradient_norm)
+
         self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
         #self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
 
