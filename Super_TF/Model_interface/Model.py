@@ -58,17 +58,17 @@ class Model(object):
         clip_max = max_norm/learning_rate
         '''
         #Select Optimizer
-        if Optimizer = 'ADAM':
+        if Optimizer is 'ADAM':
             if Optimizer_params is None:
                 self.optimizer = tf.train.AdamOptimizer(learning_rate)
             else:
                 self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=Optimizer_params['beta1'], beta2=Optimizer_params['beta2'], epsilon=Optimizer_params['epsilon'])
-        elif Optimizer = 'RMS':
+        elif Optimizer is 'RMS':
             if Optimizer_params is None:
                 self.optimizer = tf.train.RMSPropOptimizer(learning_rate)
             else:
                 self.optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=Optimizer_params['decay'], momentum=Optimizer_params['momentum'], epsilon=Optimizer_params['epsilon'])
-        elif Optimizer = 'SGD':
+        elif Optimizer is 'SGD':
                 self.optimizer= tf.train.GradientDescentOptimizer(learning_rate)
 
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
