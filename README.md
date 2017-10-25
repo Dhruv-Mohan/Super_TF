@@ -43,3 +43,9 @@ I've edited and added to certain network architectures to fulfill a certain nich
  
   FRRN-C is build upon FRRN-A. Here the center Full-Resolution residual block is replaced by densely conected block of dialated convolutions.
  Moreover the Full-Resolution Residual Network is enclosed in an encoder decoder pair with doubles the input and output resolution. 
+ 
+ ### Currently working on:
+ Applying FRRN-C on Carvana Image Masking Challenge
+ 
+Going though Pytorch Documentation
+Preparing wrapper to work with both TF and Pytorch as backend 
