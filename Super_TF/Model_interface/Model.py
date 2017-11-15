@@ -70,15 +70,27 @@ class Model(object):
                 self.optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=Optimizer_params['decay'], momentum=Optimizer_params['momentum'], epsilon=Optimizer_params['epsilon'])
         elif Optimizer is 'SGD':
                 self.optimizer= tf.train.GradientDescentOptimizer(learning_rate)
-
+        '''#Failed gpu memory saving experiment
+        vars = tf.trainable_variables()
+        total_length = len(vars)/2
+        first_half = []
+        second_half = []
+        for index,grad in enumerate(vars):
+            if index < total_length:
+                first_half.append(grad)
+            else:
+                second_half.append(grad)
+        #grads1 = self.optimizer.compute_gradients(self.loss, var_list=first_half)
+        #grads2 = self.optimizer.compute_gradients(self.loss, var_list=second_half)
+                self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step, var_list=first_half)
+        self.train_step2 = self.optimizer.minimize(self.loss,global_step=self.global_step, var_list=second_half)
+        '''
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
         
         if Gradient_norm is not None:
             gradients, _ = tf.clip_by_global_norm(gradients, Gradient_norm)
 
         self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
-        #self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step)
-
 
     def Construct_Model(self):
         self.model_dict['Model_Type'] = Factory(**self.kwargs).get_model()
@@ -174,26 +186,33 @@ class Model(object):
         return(out)
 
 
+
+
     def Train_Iter(self, iterations, save_iterations, data, log_iteration=10, restore=True, session=None):
         #Get default session
         if session is None:
             session = tf.get_default_session()
         #Try restore
         if restore:
+            print('Restoring Default session')
             self.Try_restore(session)
-
+            print('Default session restored')
         self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         #session.run(self.global_step.initializer)
         for step in range(iterations):
             step = session.run([self.global_step])[0]
+            print('Getting batch')
             batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
             IO_feed_dict = self.Construct_IO_dict(batch)            #Construct train dict
+            print('Constructing IO feed dict')
             train_feed_dict = {**IO_feed_dict, **self.train_dict}
 
             #Train Step
+            print('getting loss')
             loss = session.run([self.loss], feed_dict=train_feed_dict)
+            print('train step first half loss')
             session.run([self.train_step], feed_dict=train_feed_dict)
             print ('Step: ',step+1,'Loss: ',loss)
 

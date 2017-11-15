@@ -251,9 +251,19 @@ class Builder(object):
         with tf.name_scope('L2Regularizer'):
             l2_weight = tf.convert_to_tensor(weight, dtype=input.dtype.base_dtype, name='weight')
             return tf.multiply(l2_weight, tf.nn.l2_loss(input), name='value')
-      
 
-    
+
+    def Lstm_cell(self, num_units=512, state_is_tuple=True):
+        with tf.name_scope('Basic LSTM Cell') as scope:
+            return(tf.contrib.rnn.BasicLSTMCell(num_units=num_units, state_is_tuple=state_is_tuple))
+
+    def Rnn_dropout(self, input, keep_prob=None, seed=None):
+        with tf.name_scope('Basic RNN Dropout') as scope:
+            if keep_prob is None:
+                keep_prob=self.Dropout_control
+            return(tf.contrib.rnn.DropoutWrapper(input, input_keep_prob=keep_prob, output_keep_prob=keep_prob))
+
+
     def variable_summaries(self, var, name):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
         with tf.name_scope('summaries'):
@@ -265,4 +275,6 @@ class Builder(object):
             tf.summary.scalar(name + 'max', tf.reduce_max(var))
             tf.summary.scalar(name + 'min', tf.reduce_min(var))
             tf.summary.histogram(name + 'histogram', var)
+
+
     #TODO: Add losses 
