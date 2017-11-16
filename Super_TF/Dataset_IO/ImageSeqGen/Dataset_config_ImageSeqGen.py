@@ -7,7 +7,7 @@ class Dataset_conifg_ImageSeqGen(object):
     def __init__(self):
         self._Image_handle     = 'image_raw'
         self._Seq_handle     = 'sequence'
-        self._Seg_mask        = 'seq_mask'
+        self._Seq_mask        = 'seq_mask'
         self._Height_handle    = 'height'
         self._Width_handle     = 'width'
         self._Depth_handle     = 'depth'

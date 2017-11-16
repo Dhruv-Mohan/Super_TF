@@ -1,6 +1,6 @@
 from utils.Dataset_writer import Dataset_writer
 from Dataset_IO.ImageSeqGen.Dataset_config_ImageSeqGen import Dataset_conifg_ImageSeqGen
-import Dataset_IO.ImageSeqGen.Dataset_ImageSeqGen_pb2
+import Dataset_IO.ImageSeqGen.Dataset_ImageSeqGen_pb2 as proto
 import tensorflow as tf
 import os
 import random
@@ -8,12 +8,12 @@ import random
 
 class label_helper(object):
 
-    def __init__(self, image_path=None, image_data=None):
+    def __init__(self, image_path=None, image_data=None, max_seq_length=13):
         self.image_path=image_path
-        self.pad_generate_mask(image_data)
+        self.pad_generate_mask(image_data, max_seq_length)
 
 
-    def pad_generate_mask(self, seq, max_seq_length=13):
+    def pad_generate_mask(self, seq, max_seq_length):
         start_seq='$' + seq
         final_seq=start_seq + '#'
         pad_length = max_seq_length - len(final_seq)
@@ -62,16 +62,16 @@ class Dataset_writer_ImageSeqGen(Dataset_conifg_ImageSeqGen,Dataset_writer):
         else:
             return False
 
-    def __shuffle_input(self, image_list):
+    def __shuffle_input(self, image_list, max_seq_length):
         data_contianer = []
         for data_val in image_list:
-            data_contianer.extend([label_helper(image_path=data_val[0], image_data=data_val[1])])
-        self.shuffled_images = image_list
+            data_contianer.extend([label_helper(image_path=data_val[0], image_data=data_val[1], max_seq_length=max_seq_length)])
+        self.shuffled_images = data_contianer
         random.shuffle(self.shuffled_images)
 
-    def __file_dict_constructor(self,  file_seq_list):
+    def __file_dict_constructor(self, file_seq_list, max_seq_length):
         image_list = file_seq_list
-        self.__shuffle_input(image_list)
+        self.__shuffle_input(image_list, max_seq_length)
 
     def __filepath_constructor(self, filename_path):
         image_list = []
@@ -84,8 +84,8 @@ class Dataset_writer_ImageSeqGen(Dataset_conifg_ImageSeqGen,Dataset_writer):
                     image_list.append(images_full_path)
         self.__shuffle_input(image_list)
 
-    def filename_constructor(self, file_dict= None):
-            self.__file_dict_constructor(file_dict)
+    def filename_constructor(self, file_dict= None, max_seq_length=13):
+            self.__file_dict_constructor(file_dict, max_seq_length)
 
     def write_record(self, sess=None):
         with tf.name_scope('Dataset_ImageSeqGen_Writer') as scope:
