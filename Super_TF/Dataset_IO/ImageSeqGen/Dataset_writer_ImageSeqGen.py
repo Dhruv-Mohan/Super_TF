@@ -11,6 +11,8 @@ class label_helper(object):
     def __init__(self, image_path=None, image_data=None, max_seq_length=13):
         self.image_path=image_path
         self.pad_generate_mask(image_data, max_seq_length)
+        print("IMAGE_PATH")
+        print(image_path)
 
 
     def pad_generate_mask(self, seq, max_seq_length):
@@ -105,10 +107,10 @@ class Dataset_writer_ImageSeqGen(Dataset_conifg_ImageSeqGen,Dataset_writer):
             for index , image_container in enumerate(self.shuffled_images):
                 printProgressBar(index+1, total_images)
                 im_rw = self.sess.run([image_raw, mean_assign],feed_dict={im_pth: image_container.image_path})
-                self.Param_dict[self._Seq_handle] = self._bytes_feature(image_container.image_data)
-                self.Param_dict[self._Seq_mask] = self._bytes_feature(image_container.seq_mask)
+                self.Param_dict[self._Seq_handle] = self._bytes_feature(str.encode(image_container.image_data))
+                self.Param_dict[self._Seq_mask] = self._bytes_feature(str.encode(image_container.seq_mask))
                 self.Param_dict[self._Image_handle] = self._bytes_feature(im_rw[0])
-                self.Param_dict[self._Image_name]   = self._bytes_feature(str.encode(image_container.image_name))
+                self.Param_dict[self._Image_name]   = self._bytes_feature(str.encode(image_container.image_path))
                 example = tf.train.Example(features=tf.train.Features(feature=self.Param_dict))
                 self._Writer.write(example.SerializeToString())
                 #ADD TO MEAN IMAGE

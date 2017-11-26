@@ -167,7 +167,7 @@ def Build_Inception_Resnet_v2a(kwargs):
                 tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_35)
                 tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_17)
                 tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_8)
-                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Dropout1)
+                tf.add_to_collection(kwargs['Model_name'] + '_Incepout', Dropout1)
                 tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
                 tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)

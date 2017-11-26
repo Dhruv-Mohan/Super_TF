@@ -23,7 +23,7 @@ class Builder(object):
         self.Dropout_control = Dropout_control
         self.State = State
 
-    def Weight_variable(self, shape, weight_decay=0.0004):
+    def Weight_variable(self, shape, weight_decay=0.000004):
         with tf.name_scope('Weight') as scope:
             ##with tf.variable_scope("Weight") as var_scope:
             #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
@@ -50,7 +50,7 @@ class Builder(object):
     def Relu(self, input):
         return tf.nn.relu(input, name='Relu')
 
-    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00004):
+    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00002):
         with tf.name_scope('Conv') as scope:
 
             if batch_type is None:
@@ -70,7 +70,7 @@ class Builder(object):
 
             return final_conv
 
-    def DConv_layer(self, input, *, batch_type=None, stride=[1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00004, D_rate=1):
+    def DConv_layer(self, input, *, batch_type=None, stride=[1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.000005, D_rate=1):
         with tf.name_scope('DConv') as scope:
             dia_conv = tf.layers.conv2d(input, dilation_rate=[D_rate,D_rate], kernel_size=[3,3], filters=filters, strides=stride,padding=padding,\
                 kernel_initializer= tf.contrib.layers.xavier_initializer())
@@ -111,7 +111,8 @@ class Builder(object):
             output_shape = [input_shape[1] * output_scale , input_shape[2] * output_scale]
             if filters is None:
                 filters= input_shape[3]
-            upscaled_input = tf.image.resize_nearest_neighbor(input, output_shape)
+            #upscaled_input = tf.image.resize_nearest_neighbor(input, output_shape)
+            upscaled_input = tf.image.resize_images(input, output_shape)
             return upscaled_input
             final_reconv = self.Conv2d_layer(input=upscaled_input, batch_type=batch_type, stride=stride, filters=filters, padding=padding, Batch_norm=Batch_norm,\
                 Activation=Activation, weight_decay=weight_decay, k_size=k_size)

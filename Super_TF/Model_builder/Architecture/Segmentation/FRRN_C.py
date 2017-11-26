@@ -86,7 +86,7 @@ def Build_FRRN_C(kwargs):
                     Stem_pool = frnn_c_builder.Pool_layer(Stem)
                 
                     Stem_pool = RU(Stem_pool, 48)
-                    #Stem_pool = RU(Stem_pool, 48)
+                    Stem_pool = RU(Stem_pool, 48)
 
                     Residual_stream = frnn_c_builder.Conv2d_layer(Stem_pool, stride=[1, 1, 1, 1], k_size=[1, 1], filters=32, Batch_norm=False)
                     Pooling_stream = frnn_c_builder.Pool_layer(Stem_pool)
@@ -170,7 +170,7 @@ def Build_FRRN_C(kwargs):
                     Conv3 = frnn_c_builder.Conv2d_layer(RP_stream_merge, stride=[1, 1, 1, 1], k_size=[1, 1], filters=48, Batch_norm=True)
                 
                     Conv3 = RU(Conv3, 48)
-                    
+                    Conv3 = RU(Conv3, 48)
 
                     Upconv = frnn_c_builder.Conv_Resize_layer(Conv3, stride=[1,1,1,1],Batch_norm=False,Activation=False,k_size=[3, 3])
                     #Upconv = frnn_c_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[kwargs['Image_width'], kwargs['Image_height']])
@@ -227,7 +227,7 @@ def Build_FRRN_C(kwargs):
                 tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
                 tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', Weighted_BCE_loss)
+                #tf.add_to_collection(kwargs['Model_name'] + '_Loss', Weighted_BCE_loss)
                 tf.add_to_collection(kwargs['Model_name'] + '_Loss', Dice_loss)
 
                 #Graph Summaries

@@ -39,7 +39,8 @@ def Build_Unet1024(kwargs):
 
                         if infilter is not None:
                             res_filters=infilter
-                        upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 2, 2, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape) #change_filters to match encoder_connect filters
+                        #upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 2, 2, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape) #change_filters to match encoder_connect filters
+                        upscale_input = unet_res_builder.Conv_Resize_layer(input, stride=[1,2,2,1], filters=res_filters, Batch_norm=True)
                         uconnect = unet_res_builder.Concat([encoder_connect, upscale_input])
                         conv1 = unet_res_builder.Conv2d_layer(uconnect, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
                         conv2 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
@@ -59,7 +60,30 @@ def Build_Unet1024(kwargs):
 
                         return res_connect
                         '''
+                def Center_pool(input, filters=768):
+                    ''' Dense dialations '''
+                    with tf.name_scope('Dense_Dialated_Center'):
+                        Dconv1 = unet_res_builder.DConv_layer(input, filters=filters, Batch_norm=True, D_rate=1, Activation=False)
+                        Dense_connect1 = unet_res_builder.Residual_connect([input, Dconv1])
 
+                        Dconv2 = unet_res_builder.DConv_layer(Dense_connect1, filters=filters, Batch_norm=True, D_rate=2, Activation=False)
+                        Dense_connect2 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2])
+
+                        Dconv4 = unet_res_builder.DConv_layer(Dense_connect2, filters=filters, Batch_norm=True, D_rate=4, Activation=False)
+                        Dense_connect3 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4 ])
+
+                        Dconv8 = unet_res_builder.DConv_layer(Dense_connect3, filters=filters, Batch_norm=True, D_rate=8, Activation=False)
+                        Dense_connect4 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8])
+
+                        Dconv16 = unet_res_builder.DConv_layer(Dense_connect4, filters=filters, Batch_norm=True, D_rate=16, Activation=False)
+                        Dense_connect5 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16])
+
+                        Dconv32 = unet_res_builder.DConv_layer(Dense_connect5, filters=filters, Batch_norm=True, D_rate=32, Activation=False)
+                        Dense_connect6 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16, Dconv32])
+
+                        Scale_output = unet_res_builder.Scale_activations(Dense_connect6,scaling_factor=0.9)
+
+                        return Scale_output
                 #Build Encoder
                 
                 Encoder1 = stack_encoder(input_reshape, 24)
@@ -84,7 +108,8 @@ def Build_Unet1024(kwargs):
                 Pool7 = unet_res_builder.Pool_layer(Encoder7) #8
 
                 #Center
-                Conv_center = unet_res_builder.Conv2d_layer(Pool7, stride=[1, 1, 1, 1], filters=768, Batch_norm=True, padding='SAME')
+                #Conv_center = unet_res_builder.Conv2d_layer(Pool7, stride=[1, 1, 1, 1], filters=768, Batch_norm=True, padding='SAME')
+                Conv_center = Center_pool(Pool7)
                 #Pool_center = unet_res_builder.Pool_layer(Conv_center) #8
                 #Build Decoder
                 Decode1 = stack_decoder(Conv_center, Encoder7, out_filters=768, output_shape=[16, 16])
@@ -94,9 +119,8 @@ def Build_Unet1024(kwargs):
                 Decode5 = stack_decoder(Decode4, Encoder3, out_filters=128, output_shape=[256, 256], infilter=256)
                 Decode6 = stack_decoder(Decode5, Encoder2, out_filters=64, output_shape=[512,512],  infilter=128)
                 Decode7 = stack_decoder(Decode6, Encoder1, out_filters=24, output_shape=[1024,1024], infilter=64)
-
                 output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
-                
+                logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
                 '''
                 Encoder1 = stack_encoder(input_reshape, 128)
                 Pool1 = unet_res_builder.Pool_layer(Encoder1) #64
@@ -123,31 +147,26 @@ def Build_Unet1024(kwargs):
                 '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
-                    weights = tf.reshape(weight_placeholder, shape=[-1, kwargs['Image_width']*kwargs['Image_height']])
-                    w2 = weights
-                    print(kwargs['Image_width']*kwargs['Image_height'])
-                    logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
-                    x = tf.abs(logits)
-                    max_x = tf.maximum(logits,0)
-                    L = tf.log(1+ tf.exp(-x))
-                    Y= output_placeholder
-                    P = tf.nn.sigmoid(x)
-                    #focal_loss = tf.multiply(tf.multiply(tf.multiply(Y, tf.square(1 - P)),L) + tf.multiply(tf.multiply(1-Y, tf.square(P)),max_x+L),w2)
-                    Weighted_BCE_loss = tf.multiply(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=output_placeholder)),0.6) #0.8
-                    focal_loss = tf.multiply(tf.multiply(Y, tf.square(1 - P)),L) + tf.multiply(tf.multiply(1-Y, tf.square(P)),max_x+L)
-                    final_focal_loss = tf.reduce_mean(focal_loss)
+                    offset = 1e-5
+                    Threshold = 0.5
+                    Probs = tf.nn.sigmoid(logits)
+                    Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
+                    Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
+                    W_I = (-output_placeholder * tf.log(Probs_processed) - (1-output_placeholder)*tf.log(Con_Probs_processed))
+                    Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I -0.01),0), tf.float32)
 
                 #Dice Loss
                 
                 with tf.name_scope('Dice_Loss'):
                     eps = tf.constant(value=1e-5, name='eps')
                     sigmoid = tf.nn.sigmoid(logits,name='sigmoid') + eps
-                    intersection =tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection') + 1
-                    union = eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder,1,name='reduce_mask') + 1)
+                    intersection =tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection')
+                    union = eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder,1,name='reduce_mask'))
                     Dice_loss = 2 * intersection / (union)
-                    Dice_loss = 1 - tf.reduce_mean(Dice_loss,name='diceloss')
+                    Dice_loss = 1 - tf.reduce_mean(Dice_loss, name='diceloss')
                     unet_res_builder.variable_summaries(sigmoid, name='logits')
-                
+                    Jacard_loss = intersection / (eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder,1,name='reduce_mask')) - intersection)
+                    Jacard_loss = 1- tf.reduce_mean(Jacard_loss, name='jclosss')
                 #Graph Exports
                 tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
@@ -158,5 +177,18 @@ def Build_Unet1024(kwargs):
                 tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_Loss', Weighted_BCE_loss)
                 tf.add_to_collection(kwargs['Model_name'] + '_Loss', Dice_loss)
+                #tf.add_to_collection(kwargs['Model_name'] + '_Loss', Jacard_loss)
+
+                if kwargs['Summary']:
+                    unet_res_builder.variable_summaries(sigmoid, name='logits')
+                    #tf.add_to_collection(kwargs['Model_name'] + '_Loss', final_focal_loss)
+                    tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
+                    tf.summary.image('WCBE', tf.reshape(W_I, [-1,kwargs['Image_width'], kwargs['Image_height'], 1]))
+                    #tf.summary.scalar('Count WCBE loss', W_I_count)
+                    #tf.summary.scalar('WCBE losssum ', tf.reduce_sum(W_I))
+                    tf.summary.scalar('Dice loss', Dice_loss)
+                    tf.summary.scalar('JC loss', Jacard_loss)
+                    #tf.summary.scalar('Focal loss', final_focal_loss)
+                return 'Segmentation'
                 return 'Segmentation'
 
