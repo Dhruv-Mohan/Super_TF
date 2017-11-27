@@ -60,7 +60,7 @@ class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification
 
 
     def next_batch(self, batch_size=1, sess=None):
-        with tf.name_scope('Batch_geter') as scope:
+        with tf.name_scope('Batch_getter') as scope:
             if sess is None :
                 self.sess = tf.get_default_session()
             else:
