@@ -1,6 +1,6 @@
 from utils.Dataset_reader import Dataset_reader
-from Dataset_IO.Dataset_conifg_classification import Dataset_conifg_classification
-import Dataset_IO.Dataset_classification_pb2 as proto
+from Dataset_IO.Classification.Dataset_conifg_classification import Dataset_conifg_classification
+import Dataset_IO.Classification.Dataset_classification_pb2 as proto
 import tensorflow as tf
 import os
 
