@@ -32,7 +32,7 @@ class Model(object):
         with tf.name_scope("Loss"):
             with tf.name_scope("Logit_Loss"):
                 loss = tf.get_collection(self.Model_name + '_Loss') #Getting losses from the graph
-
+            
             if Reg_loss is None:
                 with tf.name_scope("Regularization_Loss"):
                     regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -53,10 +53,10 @@ class Model(object):
             learning_rate = starter_learning_rate
         if self.kwargs['Summary']:
             tf.summary.scalar('Learning_rate', learning_rate)
-        '''
-        clip_min = - max_norm/learning_rate
-        clip_max = max_norm/learning_rate
-        '''
+        
+        clip_min = - 1.0
+        clip_max = 1.0
+        
         #Select Optimizer
         if Optimizer is 'ADAM':
             if Optimizer_params is None:
@@ -86,10 +86,11 @@ class Model(object):
         self.train_step2 = self.optimizer.minimize(self.loss,global_step=self.global_step, var_list=second_half)
         '''
         gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
+        #gradients = tf.clip_by_value(gradients, clip_min, clip_max,'clipped_grads')
         
         if Gradient_norm is not None:
             gradients, _ = tf.clip_by_global_norm(gradients, Gradient_norm)
-
+        
         self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
 
     def Construct_Model(self):
@@ -98,14 +99,24 @@ class Model(object):
         print('Model Graph Keys')
         print(tf.get_default_graph().get_all_collection_keys())
 
-        self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
         self.model_dict['Input_ph'] = tf.get_collection(self.Model_name + '_Input_ph')[0]
         self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
-        self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
         self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
-        self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
-        if self.model_dict['Model_Type'] is 'Segmentation' :
+        self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
+        self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
+
+
+        elif self.model_dict['Model_Type'] is 'Segmentation' :
             self.model_dict['Weight_ph'] = tf.get_collection(self.Model_name + '_Weight_ph')[0]
+
+
+        elif self.model_dict['Model_Type'] is 'Sequence':
+            self.model_dict['Input_seq'] = tf.get_collection(self.Model_name + '_Input_seq_ph')[0]
+            self.model_dict['Mask'] = tf.get_collection(self.Model_name + '_Mask_ph')[0]
+            self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')[0]
+            self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')[0]
+            self.model_dict['Lstm_state_tuple'] = tf.get_collection(self.Model_name + '_Lstm_state_tuple')[0]
+
 
     def Construct_Accuracy_op(self):
         with tf.name_scope('accuracy'):
@@ -131,6 +142,10 @@ class Model(object):
                 tf.summary.scalar('accuracy', self.accuracy)
                 self.accuracy_op = True
 
+            elif self.model_dict['Model_Type'] is 'Sequence' :
+                correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
+                self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                self.accuracy_op = True
             #tf.cond(self.accuracy > 0.92, lambda: tf.summary.image(name='False images', tensor=false_images), lambda: tf.summary.tensor_summary(name='correct_predictions', tensor=correct_prediction))
 
     def Construct_Writers(self, session=None):
@@ -153,6 +168,9 @@ class Model(object):
 
         elif self.model_dict['Model_Type'] is 'Segmentation':
             return {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1], self.model_dict['Weight_ph']: batch[2]}
+        
+        elif self.model_dict['Model_Type'] is 'Sequence':
+            return {self.model_dict['Input_ph']: batch[0], self.model_dict['Input_seq']: batch[1], self.model_dict['Output_ph']: batch[2], self.model_dict['Mask']: batch[3]}
 
     def Construct_Predict_op(self):
         with tf.name_scope('Predict'):
@@ -160,6 +178,8 @@ class Model(object):
                 self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
             elif self.model_dict['Model_Type'] is 'Segmentation':
                 self.Predict_op = tf.sigmoid(self.model_dict['Output'])
+            elif self.model_dict['Model_Type'] is 'Sequence':
+                self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
 
     def Try_restore(self,session=None):
         #Get default session
@@ -200,6 +220,7 @@ class Model(object):
         self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
+        
         #session.run(self.global_step.initializer)
         for step in range(iterations):
             step = session.run([self.global_step])[0]
@@ -212,7 +233,6 @@ class Model(object):
             #Train Step
             print('getting loss')
             loss = session.run([self.loss], feed_dict=train_feed_dict)
-            print('train step first half loss')
             session.run([self.train_step], feed_dict=train_feed_dict)
             print ('Step: ',step+1,'Loss: ',loss)
 
