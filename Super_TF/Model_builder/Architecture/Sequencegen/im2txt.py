@@ -14,6 +14,8 @@ def Build_Im2txt(kwargs):
                 state_placeholder = tf.placeholder(tf.string, name="State")
                 input_reshape = im2txt_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
 
+
+                #reader will give input seq, mask and target seq
                 #show tell init
                 initalizer = tf.random_uniform_initializer(minval=-0.08 , maxval=0.08)
 
@@ -43,3 +45,16 @@ def Build_Im2txt(kwargs):
 
                     logits = im2txt_builder.FC_layer(lstm_outputs, filters=40, readout=True)
                     #Target seq and losses next 
+                    targets = tf.reshape(target_seq, [-1]) #flattening target seqs
+                    weights = tf.to_float(tf.reshape(input_mask, [-1]))
+
+                    with tf.name_scope('Softmax_CE_loss'):
+                        seq_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=targets, logits=logits)
+                        batch_loss = tf.div(tf.reduce_sum(tf.multiply(seq_loss, weights)), tf.reduce_sum(weights))
+
+
+                    tf.add_to_collection(kwargs['Model_name'] + '_Loss', batch_loss)
+                    #Test output next
+
+                    return 'Sequence'
+
