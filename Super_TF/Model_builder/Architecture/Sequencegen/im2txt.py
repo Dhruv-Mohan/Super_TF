@@ -21,6 +21,7 @@ def Build_Im2txt(kwargs):
                 elif kwargs['State'] is 'Test':
                     input_seq_placeholder = tf.placeholder(tf.int32, shape=[None, 1], name='Input_Seq')
                     target_seq_placeholder = tf.placeholder(tf.int32, shape=[None, 1], name='Target_Seq')
+
                 mask_placeholder = tf.placeholder(tf.int32, shape=[None, kwargs['Padded_length']], name='Seq_Mask')
                 Lstm_state_placeholder = tf.placeholder(tf.float32, shape=[])
 
@@ -53,7 +54,7 @@ def Build_Im2txt(kwargs):
 
                 #Seq embeddings
                 embeddings_map = tf.get_variable(name='Map', shape=[40,512], initializer=initalizer)
-                seq_embeddings = tf.nn.embedding_lookup(embeddings_map, output_placeholder) #output placeholder is placeholder need to fit to input seq
+                seq_embeddings = tf.nn.embedding_lookup(embeddings_map, input_seq_placeholder) 
 
 
                 lstm_cell = im2txt_builder.Lstm_cell();
@@ -67,7 +68,8 @@ def Build_Im2txt(kwargs):
                         state_feed = tf.placeholder(dtype=tf.float32, shape=[None, sum(lstm_cell.state_size)], name='State_feed')
                         state_tuple = tf.split(value=state_feed, num_or_size_splits=2, axis=1)
                         lstm_outputs, state_tuple = lstm_cell(inputs = tf.squeeze(seq_embeddings, axis=[1]), state=state_tuple)
-
+                        concat_input = tf.concat(values= initial_stae, axis=1)
+                        concat_state = tf.concat(values=state_tuple, axis=1)
 
                     elif kwargs['State'] is 'Train':
                         sequence_length = tf.reduce_sum(sequence_mask, 1) #Add sequence_mask 
@@ -77,22 +79,27 @@ def Build_Im2txt(kwargs):
 
                     logits = im2txt_builder.FC_layer(lstm_outputs, filters=40, readout=True)
                     #Target seq and losses next 
-                    targets = tf.reshape(target_seq, [-1]) #flattening target seqs
-                    weights = tf.to_float(tf.reshape(input_mask, [-1]))
+                    if kwargs['State'] is 'Train':
+                        targets = tf.reshape(target_seq_placeholder, [-1]) #flattening target seqs
+                        weights = tf.to_float(tf.reshape(input_mask, [-1]))
 
-                    with tf.name_scope('Softmax_CE_loss'):
-                        seq_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=targets, logits=logits)
-                        batch_loss = tf.div(tf.reduce_sum(tf.multiply(seq_loss, weights)), tf.reduce_sum(weights))
+                        with tf.name_scope('Softmax_CE_loss'):
+                            seq_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=targets, logits=logits)
+                            batch_loss = tf.div(tf.reduce_sum(tf.multiply(seq_loss, weights)), tf.reduce_sum(weights))
 
 
-                    tf.add_to_collection(kwargs['Model_name'] + '_Initial_state', initial_stae)
-                    tf.add_to_collection(kwargs['Model_name'] + '_Lstm_state_feed', state_feed)
-                    tf.add_to_collection(kwargs['Model_name'] + '_Lstm_state_tuple', state_tuple)
                     tf.add_to_collection(kwargs['Model_name'] + '_Input_seq_ph', input_seq_placeholder)
                     tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', target_seq_placeholder)
                     tf.add_to_collection(kwargs['Model_name'] + '_Mask_ph', mask_placeholder)
                     tf.add_to_collection(kwargs['Model_name'] + '_Output', logits)
-                    tf.add_to_collection(kwargs['Model_name'] + '_Loss', batch_loss)
+
+                    if kwargs['State'] is 'Test':
+                        tf.add_to_collection(kwargs['Model_name'] + '_Initial_state', concat_input)
+                        tf.add_to_collection(kwargs['Model_name'] + '_Lstm_state_feed', state_feed)
+                        tf.add_to_collection(kwargs['Model_name'] + '_Lstm_state', concat_state)
+
+                    elif kwargs['State'] is 'Train':
+                        tf.add_to_collection(kwargs['Model_name'] + '_Loss', batch_loss)
 
                     #Test output next
 

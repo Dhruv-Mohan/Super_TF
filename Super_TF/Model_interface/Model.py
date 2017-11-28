@@ -104,18 +104,21 @@ class Model(object):
         self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
         self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
         self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
+        self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
 
-
-        elif self.model_dict['Model_Type'] is 'Segmentation' :
+        if self.model_dict['Model_Type'] is 'Segmentation' :
             self.model_dict['Weight_ph'] = tf.get_collection(self.Model_name + '_Weight_ph')[0]
 
 
         elif self.model_dict['Model_Type'] is 'Sequence':
             self.model_dict['Input_seq'] = tf.get_collection(self.Model_name + '_Input_seq_ph')[0]
             self.model_dict['Mask'] = tf.get_collection(self.Model_name + '_Mask_ph')[0]
-            self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')[0]
-            self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')[0]
-            self.model_dict['Lstm_state_tuple'] = tf.get_collection(self.Model_name + '_Lstm_state_tuple')[0]
+
+            if self.kwargs['State'] is 'Test':
+                self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')[0]
+                self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')[0]
+                self.model_dict['Lstm_state'] = tf.get_collection(self.Model_name + '_Lstm_state')[0]
+
 
 
     def Construct_Accuracy_op(self):
