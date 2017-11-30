@@ -4,16 +4,21 @@ import os
 
 Segnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Segmentation'
 Classnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Classification'
+Seqnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Sequencegen'
 
 segnet_archs = os.listdir(Segnets)
 classnet_archs = os.listdir(Classnets)
+seqnet_archs = os.listdir(Seqnets)
 
-for segnet, classnet in zip(segnet_archs, classnet_archs):
+for segnet, classnet, seqnet in zip(segnet_archs, classnet_archs, seqnet_archs):
     if ".pyc" not in segnet and "__init__" not in segnet and ".py" in segnet:
         exec("from Model_builder.Architecture.Segmentation." + segnet[:-3] + " import *" )
 
     if ".pyc" not in  classnet and "__init__" not in  classnet and ".py" in  classnet:
         exec("from Model_builder.Architecture.Classification." + classnet[:-3] + " import *" )
+
+    if ".pyc" not in  seqnet and "__init__" not in  seqnet and ".py" in  seqnet:
+        exec("from Model_builder.Architecture.Sequencegen." + seqnet[:-3] + " import *" )
 
 
 class Factory(object):

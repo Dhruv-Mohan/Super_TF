@@ -11,7 +11,7 @@ class Model(object):
         print(self.Model_name)
         self.kwargs = kwargs
         self.global_step=tf.Variable(0, trainable=False, dtype=tf.int32, name='global_step')
-
+        tf.add_to_collection('Global_Step', self.global_step)
         #Init class dicts
         self.test_dict = {}
         self.train_dict = {}
@@ -46,6 +46,8 @@ class Model(object):
 
     def Set_optimizer(self, starter_learning_rate=0.0001, decay_steps=100000, decay_rate=0.84, Fixed_LR=None, Optimizer='RMS', Optimizer_params=None, Gradient_norm=None): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
+        def replace_none_with_zero(i, shape):
+            return np.zeros(shape=shape) if i==None else i
 
         if Fixed_LR is None:
             learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=True)
@@ -85,13 +87,23 @@ class Model(object):
                 self.train_step = self.optimizer.minimize(self.loss,global_step=self.global_step, var_list=first_half)
         self.train_step2 = self.optimizer.minimize(self.loss,global_step=self.global_step, var_list=second_half)
         '''
-        gradients, tvars = zip(*self.optimizer.compute_gradients(self.loss))
+        
         #gradients = tf.clip_by_value(gradients, clip_min, clip_max,'clipped_grads')
-        
+        tvs =tf.trainable_variables()
+        acc_grads = [tf.Variable(tf.zeros_like(tv.initialized_value()), trainable=False) for tv in tvs]
+        #acc_grads = tf.Variable(tf.zeros(shape=list(gradients).get_shape()), trainable=False)
+        self.reset_accumulated_grads = [tv.assign(tf.zeros_like(tv)) for tv in acc_grads]
+        gvs, tvars = zip(*self.optimizer.compute_gradients(self.loss, tvs))
+        self.accumulate_gradients = [acc_grads[i].assign_add(replace_none_with_zero(gv, acc_grads[i].get_shape().as_list())) for i, gv in enumerate(gvs)]
+
         if Gradient_norm is not None:
-            gradients, _ = tf.clip_by_global_norm(gradients, Gradient_norm)
+            gradients, _ = tf.clip_by_global_norm(acc_grads, Gradient_norm)
+
+
         
-        self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        with tf.control_dependencies(update_ops):
+            self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
 
     def Construct_Model(self):
         self.model_dict['Model_Type'] = Factory(**self.kwargs).get_model()
@@ -118,7 +130,7 @@ class Model(object):
                 self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')[0]
                 self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')[0]
                 self.model_dict['Lstm_state'] = tf.get_collection(self.Model_name + '_Lstm_state')[0]
-
+                
 
 
     def Construct_Accuracy_op(self):
@@ -146,9 +158,14 @@ class Model(object):
                 self.accuracy_op = True
 
             elif self.model_dict['Model_Type'] is 'Sequence' :
-                correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
-                self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+                
+                correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.reshape(tf.cast(tf.reshape(self.model_dict['Output_ph'], shape=[-1]), tf.int64), [-1]))
+                pre_acc = tf.reduce_sum(tf.to_float(correct_prediction))
+                self.accuracy = tf.div(pre_acc,  tf.maximum(1.0,tf.reduce_sum(tf.to_float(tf.reshape(self.model_dict['Mask'], [-1])))))
+                tf.reduce_sum(tf.to_float(tf.reshape(self.model_dict['Mask'], [-1])))
                 self.accuracy_op = True
+                tf.summary.scalar('accuracy', self.accuracy)
+                self.out_op = tf.argmax(self.model_dict['Output'], 1)
             #tf.cond(self.accuracy > 0.92, lambda: tf.summary.image(name='False images', tensor=false_images), lambda: tf.summary.tensor_summary(name='correct_predictions', tensor=correct_prediction))
 
     def Construct_Writers(self, session=None):
@@ -211,7 +228,7 @@ class Model(object):
 
 
 
-    def Train_Iter(self, iterations, save_iterations, data, log_iteration=10, restore=True, session=None):
+    def Train_Iter(self, iterations, save_iterations, data, log_iteration=10, restore=True, session=None, micro_batch=10):
         #Get default session
         if session is None:
             session = tf.get_default_session()
@@ -227,19 +244,24 @@ class Model(object):
         #session.run(self.global_step.initializer)
         for step in range(iterations):
             step = session.run([self.global_step])[0]
+            session.run(self.reset_accumulated_grads)
             print('Getting batch')
-            batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
-            IO_feed_dict = self.Construct_IO_dict(batch)            #Construct train dict
-            print('Constructing IO feed dict')
-            train_feed_dict = {**IO_feed_dict, **self.train_dict}
+            for i in range(micro_batch):
+                
+                print('Getting micro batch')
+                batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
+                IO_feed_dict = self.Construct_IO_dict(batch)            #Construct train dict
+                print('Constructing IO feed dict')
+                train_feed_dict = {**IO_feed_dict, **self.train_dict}
+                session.run(self.accumulate_gradients, feed_dict=train_feed_dict)
 
-            #Train Step
-            print('getting loss')
-            loss = session.run([self.loss], feed_dict=train_feed_dict)
-            session.run([self.train_step], feed_dict=train_feed_dict)
+                #Train Step
+                #print('getting loss')
+            #loss= session.run([self.loss], feed_dict=train_feed_dict)
+            _, out_p, loss =session.run([self.train_step, self.out_op, self.loss], feed_dict=train_feed_dict)
             print ('Step: ',step+1,'Loss: ',loss)
-
-
+            print('Output:', out_p )
+            print('Target:', np.reshape(batch[2], [-1]))
             #saver block
             if(step + 1) % save_iterations == 0:
                 print('Saving Checkpoint')
@@ -247,7 +269,7 @@ class Model(object):
 
             #logger block
             if(step + 1) % log_iteration == 0:
-                test_feed_dict = {**IO_feed_dict, **self.test_dict}               #Construst Test dict
+                test_feed_dict = {**IO_feed_dict, **self.train_dict}               #Construst Test dict
                 if self.accuracy_op:
                     summary, train_accuracy, glo_step = session.run([self.merged, self.accuracy, self.global_step], \
                                 feed_dict=test_feed_dict)

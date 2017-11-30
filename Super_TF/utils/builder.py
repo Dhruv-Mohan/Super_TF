@@ -11,6 +11,7 @@ class Builder(object):
         self.Image_cspace = kwargs['Image_cspace']
         self.Dropout_control = None
         self.State = None
+        self.global_step = tf.get_collection('Global_Step')[0]
 
     def __enter__(self):
         return self 
@@ -19,18 +20,37 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control= None, State= None):
+    def control_params(self, Dropout_control= None, State= None, Rmax=3, Dmax=5, R_Iter=10, D_Iter=20):
         self.Dropout_control = Dropout_control
         self.State = State
+        self.construct_renorm_dict(Rmax=Rmax, Dmax=Dmax, R_Iter=R_Iter, D_Iter=D_Iter)
+
+    def construct_renorm_dict(self, Rmax, Dmax, R_Iter, D_Iter):
+        rmax = tf.Variable(1.0, trainable=False, name='Rmax', dtype=tf.float32)
+        rmin = tf.Variable(0.99, trainable=False, name='Rmin', dtype=tf.float32)
+        dmax = tf.Variable(0.0, trainable=False, name='Dmax', dtype=tf.float32)
+        update_rmax = tf.cond(self.global_step<R_Iter, self.assign_add(rmax, 1, Rmax, R_Iter), self.make_noop).op
+        update_dmax = tf.cond(self.global_step<D_Iter, self.assign_add(dmax, 0, Dmax, D_Iter), self.make_noop).op
+        update_rmin = tf.cond(self.global_step<R_Iter, self.assign_inv(rmin, rmax), self.make_noop).op
+
+        tf.summary.scalar('rmax', rmax)
+        tf.summary.scalar('rmin', rmin)
+        tf.summary.scalar('dmax', dmax)
+
+        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmax)
+        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_dmax)
+        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmin)
+        self.renorm_dict = {'rmax':rmax, 'rmin':rmin, 'dmax':dmax}
 
     def Weight_variable(self, shape, weight_decay=0.000004):
         with tf.name_scope('Weight') as scope:
             ##with tf.variable_scope("Weight") as var_scope:
             #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
-            initi = tf.contrib.layers.xavier_initializer()
+            #initi = tf.contrib.layers.xavier_initializer()
+            initi = tf.random_uniform_initializer(minval=-0.08, maxval=0.08)
             weights = tf.Variable(initi(shape))
             #weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(weights, weight_decay))
+            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights)* weight_decay)
             #if self.Summary:
                 ##self.variable_summaries(weights)
             return weights
@@ -50,9 +70,9 @@ class Builder(object):
     def Relu(self, input):
         return tf.nn.relu(input, name='Relu')
 
-    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00002):
+    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00000001):
         with tf.name_scope('Conv') as scope:
-
+            #weight_decay=0.00002
             if batch_type is None:
                 batch_type=self.State
 
@@ -162,6 +182,7 @@ class Builder(object):
             ret = tf.scatter_nd(ind_, pool_, shape=tf.cast([input_shape[0], output_shapeaslist[1] * output_shapeaslist[2] * output_shapeaslist[3] ], tf.int64))
             ret = tf.reshape(ret, [-1, output_shapeaslist[1], output_shapeaslist[2], output_shapeaslist[3]])
             return ret
+
     def FC_layer(self, input, filters=1024, readout=False, weight_decay=0.00004): #Expects flattened layer
         with tf.name_scope('FC') as scope:
 
@@ -220,18 +241,20 @@ class Builder(object):
         ''' https://r2rt.com/implementing-batch-normalization-in-tensorflow.html for an explanation of the code'''
         with tf.name_scope('Batch_norm') as scope:
             #with tf.variable_scope("Batch_norm") as var_scope:
-            pop_mean = tf.Variable(tf.zeros([input.get_shape()[-1]]), trainable=False)
-            pop_var = tf.Variable(tf.ones([input.get_shape()[-1]]), trainable=False)
+            #pop_mean = tf.Variable(tf.zeros([input.get_shape()[-1]]), trainable=False)
+            #pop_var = tf.Variable(tf.ones([input.get_shape()[-1]]), trainable=False)
                 #pop_mean = tf.get_variable(name="pop_mean", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer(), trainable=False)
                 #pop_var = tf.get_variable(name="pop_var", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer(), trainable=False)
                 
                 #scale = tf.get_variable(name="Bn_scale", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer())
                 #beta = tf.get_variable(name="Bn_beta", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer())
                 #var_scope.reuse_variables()
-            scale = tf.Variable(tf.ones([input.get_shape()[-1]]))
-            beta = tf.Variable(tf.zeros([input.get_shape()[-1]]))
+            #scale = tf.Variable(tf.ones([input.get_shape()[-1]]))
+            #beta = tf.Variable(tf.zeros([input.get_shape()[-1]]))
 
-            return tf.cond(tf.equal(batch_type, 'TRAIN'), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
+            return tf.contrib.layers.batch_norm(inputs=input, center=True, scale=False, epsilon=0.001, is_training=tf.equal(batch_type, 'Train'), \
+                  renorm=True, renorm_clipping=self.renorm_dict, renorm_decay=0.99)
+            #return tf.cond(tf.equal(batch_type, 'TRAIN'), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
 
     def Concat(self, inputs, axis=3):
         with tf.name_scope('Concat') as scope:
@@ -255,15 +278,14 @@ class Builder(object):
 
 
     def Lstm_cell(self, num_units=512, state_is_tuple=True):
-        with tf.name_scope('Basic LSTM Cell') as scope:
+        with tf.name_scope('Basic_LSTM_Cell') as scope:
             return(tf.contrib.rnn.BasicLSTMCell(num_units=num_units, state_is_tuple=state_is_tuple))
 
     def Rnn_dropout(self, input, keep_prob=None, seed=None):
-        with tf.name_scope('Basic RNN Dropout') as scope:
+        with tf.name_scope('Basic_RNN_Dropout') as scope:
             if keep_prob is None:
                 keep_prob=self.Dropout_control
             return(tf.contrib.rnn.DropoutWrapper(input, input_keep_prob=keep_prob, output_keep_prob=keep_prob))
-
 
     def variable_summaries(self, var, name):
         """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
@@ -277,5 +299,16 @@ class Builder(object):
             tf.summary.scalar(name + 'min', tf.reduce_min(var))
             tf.summary.histogram(name + 'histogram', var)
 
+    #https://gist.github.com/yaroslavvb/d592394c0cedd32513f8fbb87ca05938#file-smart_initialize-py-L22
+    def make_noop(self) : return tf.no_op()
 
+    def assign_add(self, var, varinit, varmax, iterations):
+        def f():
+            return tf.assign_add(var, tf.cast( (varmax-varinit)/iterations, dtype=tf.float32)).op
+        return f
+
+    def assign_inv(self, var, var2):
+        def f():
+            return tf.assign(var, tf.cast(1/var2, dtype=tf.float32)).op
+        return f
     #TODO: Add losses 
