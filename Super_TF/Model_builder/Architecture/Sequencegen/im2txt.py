@@ -42,26 +42,29 @@ def Build_Im2txt(kwargs):
                 Build_Inception_Resnet_v2a(kwargs)
                 
                 #Extracting necessary variables from feature extractor
-                inception_output = tf.get_collections(self.Model_name + '_Incepout')[0]
-                inception_state = tf.get_collections(self.Model_name + '_State')[0]
-                inception_dropout = tf.get_collections(self.Model_name + '_Dropout_prob_ph')[0]
+                with tf.name_scope('Feature_Extractor'):
+                    inception_output = tf.get_collection(kwargs['Model_name'] + '_Incepout')[0]
+                    inception_state = tf.get_collection(kwargs['Model_name'] + '_State')[0]
+                    inception_dropout = tf.get_collection(kwargs['Model_name'] + '_Dropout_prob_ph')[0]
 
                 #Setting control params
-                im2txt_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                im2txt_builder.control_params(Dropout_control=inception_dropout, State=inception_state)
 
                 #Image embeddings
-                image_embeddings = im2txt_builder.FC_layer(inception_output, filters=512)
+                with tf.name_scope('Lstm_Embeddings'):
+                    image_embeddings = im2txt_builder.FC_layer(inception_output, filters=512)
+                    image_embeddings_size= tf.shape(image_embeddings)
+                    #Seq embeddings
+                    embeddings_map = tf.get_variable(name='Map', shape=[40,512], initializer=initalizer)
+                    seq_embeddings = tf.nn.embedding_lookup(embeddings_map, input_seq_placeholder) 
 
-                #Seq embeddings
-                embeddings_map = tf.get_variable(name='Map', shape=[40,512], initializer=initalizer)
-                seq_embeddings = tf.nn.embedding_lookup(embeddings_map, input_seq_placeholder) 
 
+                    lstm_cell = im2txt_builder.Lstm_cell();
+                    lstm_cell = im2txt_builder.Rnn_dropout(lstm_cell)
 
-                lstm_cell = im2txt_builder.Lstm_cell();
-                lstm_cell = im2txt_builder.Rnn_dropout(lstm_cell)
                 with tf.variable_scope("lstm") as lstm_scope:
-                    zero_state = lstm_cell.zero_state(batch_size=image_embeddings.get_shape()[0], dtype=tf.float32)
-                    _, initial_stae = lstm_cell(image_embedding, zero_state)
+                    zero_state = lstm_cell.zero_state(batch_size=image_embeddings_size[0], dtype=tf.float32)
+                    _, initial_stae = lstm_cell(image_embeddings, zero_state)
 
                     lstm_scope.reuse_variables()
                     if kwargs['State'] is 'Test':
@@ -72,20 +75,22 @@ def Build_Im2txt(kwargs):
                         concat_state = tf.concat(values=state_tuple, axis=1)
 
                     elif kwargs['State'] is 'Train':
-                        sequence_length = tf.reduce_sum(sequence_mask, 1) #Add sequence_mask 
-                        lstm_outputs, _ =nn.dynamic_rnn(cell=lstm_cell, inputs=seq_embedding, sequence_length=sequence_length, initial_stae=initial_stae, dtype=tf.float32, scope=lstm_scope)
+                        sequence_length = tf.reduce_sum(mask_placeholder, 1) #Add sequence_mask 
+                        lstm_outputs, _ =nn.dynamic_rnn(cell=lstm_cell, inputs=seq_embeddings, sequence_length=sequence_length, initial_state=initial_stae, dtype=tf.float32, scope=lstm_scope)
 
-                    lstm_outputs = tf.reshape(lstm_outputs, [-1, lstm_cell.output_size])
+                    with tf.name_scope('Lstm_output'):
+                        lstm_outputs = tf.reshape(lstm_outputs, [-1, lstm_cell.output_size])
 
-                    logits = im2txt_builder.FC_layer(lstm_outputs, filters=40, readout=True)
+                        logits = im2txt_builder.FC_layer(lstm_outputs, filters=40, readout=True)
                     #Target seq and losses next 
-                    if kwargs['State'] is 'Train':
-                        targets = tf.reshape(target_seq_placeholder, [-1]) #flattening target seqs
-                        weights = tf.to_float(tf.reshape(input_mask, [-1]))
+                    with tf.name_scope('Lstm_loss'):
+                        if kwargs['State'] is 'Train':
+                            targets = tf.reshape(target_seq_placeholder, [-1]) #flattening target seqs
+                            weights = tf.to_float(tf.reshape(mask_placeholder, [-1]))
 
-                        with tf.name_scope('Softmax_CE_loss'):
-                            seq_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=targets, logits=logits)
-                            batch_loss = tf.div(tf.reduce_sum(tf.multiply(seq_loss, weights)), tf.reduce_sum(weights))
+                            with tf.name_scope('Softmax_CE_loss'):
+                                seq_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=targets, logits=logits)
+                                batch_loss = tf.div(tf.reduce_sum(tf.multiply(seq_loss, weights)), tf.maximum(tf.reduce_sum(weights),1))
 
 
                     tf.add_to_collection(kwargs['Model_name'] + '_Input_seq_ph', input_seq_placeholder)
@@ -104,4 +109,3 @@ def Build_Im2txt(kwargs):
                     #Test output next
 
                     return 'Sequence'
-
