@@ -64,8 +64,8 @@ class Dataset_writer_segmentation(Dataset_config_segmentation, Dataset_writer):
 
 
     def getweight(self, mask_mat=None):
-        gray_mask = cv2.cvtColor(mask_mat, cv2.COLOR_BGR2GRAY)
-
+        #gray_mask = cv2.cvtColor(mask_mat, cv2.COLOR_BGR2GRAY)
+        gray_mask=mask_mat
         ret, bin_mask = cv2.threshold(gray_mask,1,1,0)
         _, contours, _ = cv2.findContours(bin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         weights = np.zeros_like(bin_mask, dtype=np.float)
@@ -103,12 +103,12 @@ class Dataset_writer_segmentation(Dataset_config_segmentation, Dataset_writer):
                 printProgressBar(index+1, total_images)
                 im_rw = self.sess.run([image_raw],feed_dict={im_pth: image_container.image_path})
                 [mask , mask_mat] = self.sess.run([mask_raw, mask_pix], feed_dict={mk_pth: image_container.mask_path})
-                mask_weightraw = self.getweight(mask_mat[0])
-                mask_weightraw =  mask_weightraw[:,:,np.newaxis]
-                weight_raw = self.sess.run([encode_image], feed_dict={image_to_encode : mask_weightraw})
+                #mask_weightraw = self.getweight(mask_mat[0])
+                #mask_weightraw =  mask_weightraw[:,:,np.newaxis]
+                #weight_raw = self.sess.run([encode_image], feed_dict={image_to_encode : mask_weightraw})
                 self.Param_dict[self._Image_handle] = self._bytes_feature(im_rw[0])
                 self.Param_dict[self._Image_mask] = self._bytes_feature(mask)
-                self.Param_dict[self._Mask_weights] = self._bytes_feature(weight_raw[0])
+                self.Param_dict[self._Mask_weights] = self._bytes_feature(mask)
                 self.Param_dict[self._Image_name]   = self._bytes_feature(str.encode(image_container.image_name))
                 example = tf.train.Example(features=tf.train.Features(feature=self.Param_dict))
                 self._Writer.write(example.SerializeToString())
