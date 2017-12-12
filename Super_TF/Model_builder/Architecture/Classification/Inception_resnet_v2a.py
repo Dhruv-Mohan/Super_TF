@@ -148,6 +148,7 @@ def Build_Inception_Resnet_v2a(kwargs):
                     model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')
                     drop1 = inceprv2a_builder.Dropout_layer(model_avg_pool)
                     output = inceprv2a_builder.FC_layer(drop1, filters=kwargs['Classes'], readout=True)
+                '''
                 #AuxLogits
                 with tf.name_scope('Auxlogits'):
                     model_aux_avg_pool = inceprv2a_builder.Pool_layer(Block_17, k_size=[1, 5, 5, 1], stride=[1, 3, 3, 1], padding='VALID', pooling_type='AVG')
@@ -167,16 +168,16 @@ def Build_Inception_Resnet_v2a(kwargs):
                 tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_35)
                 tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_17)
                 tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', Block_8)
-                tf.add_to_collection(kwargs['Model_name'] + '_Incepout', Dropout1)
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
                 tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
-                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_logit_loss)
                 tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_auxlogit_loss)
-
+                '''
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Incepout', drop1)
+                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
                 return 'Classification'
 
 
