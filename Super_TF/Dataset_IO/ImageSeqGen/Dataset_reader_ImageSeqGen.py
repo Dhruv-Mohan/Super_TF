@@ -70,7 +70,7 @@ class Dataset_reader_ImageSeqGen(Dataset_reader, Dataset_conifg_ImageSeqGen):
 
     def batch_inputs(self):
         image , complete_seq, complete_mask = self.single_read()
-        images , out_complete_seq, out_complete_mask = tf.train.shuffle_batch([image, complete_seq, complete_mask], batch_size=self.batch_size, num_threads=8, capacity=500+128, min_after_dequeue=500)
+        images , out_complete_seq, out_complete_mask = tf.train.shuffle_batch([image, complete_seq, complete_mask], batch_size=self.batch_size, num_threads=8, capacity=2, min_after_dequeue=1)
         #TODO: seq encoding via vocab dict
         return images, out_complete_seq, out_complete_mask
 

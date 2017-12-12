@@ -16,7 +16,8 @@ class Model(object):
         self.kwargs = kwargs
         self.global_step=tf.Variable(0, trainable=False, dtype=tf.int32, name='global_step')
         tf.add_to_collection('Global_Step', self.global_step)
-
+        self.initial_state_lstm= None
+        self.prior_path=None
         #Init class dicts
         self.test_dict = {}
         self.train_dict = {}
@@ -206,6 +207,21 @@ class Model(object):
             elif self.model_dict['Model_Type'] is 'Sequence':
                 self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
 
+    def Set_initial_state(self, image, session=None):
+        if session is None:
+            session = tf.get_default_session()
+        lstm_init_dict = {self.model_dict['Input_ph']: image}
+        init_feed_dict = {**lstm_init_dict, **self.test_dict}
+        self.initial_state_lstm = session.run(self.model_dict['Initial_state'], feed_dict=init_feed_dict)
+
+    def Get_LSTM_prediction(self, input_feed, session=None):
+        if session is None:
+            session = tf.get_default_session()
+        lstm_predict_dict = {self.model_dict['Input_seq']: input_feed, self.model_dict['Lstm_state_feed']: self.initial_state_lstm}
+        predict_feed_dict = {**lstm_predict_dict, **self.test_dict}
+        output, self.initial_state_lstm = session.run([self.Predict_op, self.model_dict['Lstm_state']], feed_dict=predict_feed_dict)
+        return output
+
     def Try_restore(self,session=None):
         #Get default session
         if session is None:
@@ -259,6 +275,7 @@ class Model(object):
             for i in range(micro_batch):
                 batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
                 print('Getting micro batch')
+                print(batch[2])
                 IO_feed_dict = self.Construct_IO_dict(batch)            #Construct train dict
                 if self.prior_path is not None:                                 #Stop gap solution to accomodate F-Net
                     prior_path=batch[3]
@@ -271,8 +288,9 @@ class Model(object):
                 else:
                     print('Constructing IO feed dict')
                     train_feed_dict = {**IO_feed_dict, **self.train_dict}
-                _,  loss = session.run([self.accumulate_gradients,  self.loss], feed_dict=train_feed_dict)
-
+                _,  loss,output = session.run([self.accumulate_gradients,  self.loss, self.Predict_op], feed_dict=train_feed_dict)
+                print(output)
+                
             #Train Step
             session.run(self.train_step)
             print ('Step: ',step+1,'Loss: ',loss)
