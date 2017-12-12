@@ -282,3 +282,8 @@ __pycache__/
 /Super_TF/playgrount2.py
 /Super_TF/Tensorflow_playground.py
 /Super_TF/test.protobuf
+/Super_TF/ImageSeqDatasetWriter.py
+/Super_TF/Freezer.py
+/Super_TF/memory_util.py
+/Super_TF/Seq_Gen_Train.py
+/Super_TF/test.py

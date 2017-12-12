@@ -12,7 +12,8 @@ class Builder(object):
         self.Dropout_control = None
         self.State = None
         self.global_step = tf.get_collection('Global_Step')[0]
-
+        self.BNscope = 0
+        self.debug = True
     def __enter__(self):
         return self 
 
@@ -20,7 +21,7 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control= None, State= None, Rmax=3, Dmax=5, R_Iter=10, D_Iter=20):
+    def control_params(self, Dropout_control= None, State= None, Rmax=3, Dmax=5, R_Iter=200*10, D_Iter=550*10):
         self.Dropout_control = Dropout_control
         self.State = State
         self.construct_renorm_dict(Rmax=Rmax, Dmax=Dmax, R_Iter=R_Iter, D_Iter=D_Iter)
@@ -36,43 +37,35 @@ class Builder(object):
         tf.summary.scalar('rmax', rmax)
         tf.summary.scalar('rmin', rmin)
         tf.summary.scalar('dmax', dmax)
-
+        
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmax)
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_dmax)
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmin)
-        self.renorm_dict = {'rmax':rmax, 'rmin':rmin, 'dmax':dmax}
+        
+        self.renorm_dict = {'rmax':rmax, 'rmin':0.0, 'dmax':dmax}
 
     def Weight_variable(self, shape, weight_decay=0.000004):
         with tf.name_scope('Weight') as scope:
-            ##with tf.variable_scope("Weight") as var_scope:
             #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
             #initi = tf.contrib.layers.xavier_initializer()
+            #initi = tf.orthogonal_initializer()
             initi = tf.random_uniform_initializer(minval=-0.08, maxval=0.08)
             weights = tf.Variable(initi(shape))
-            #weights = tf.Variable(tf.truncated_normal(shape, stddev=0.1))
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights)* weight_decay)
-            #if self.Summary:
-                ##self.variable_summaries(weights)
             return weights
 
 
     def Bias_variable(self, shape, weight_decay=0.04):
         with tf.name_scope('Bias') as scope:
-            #with tf.variable_scope("Bias") as var_scope:
             biases = tf.Variable(tf.constant(0.01, shape=[int(shape)]))
-            #tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, self.Regloss_l2(biases, weight_decay))
-            #biases = tf.get_variable(name='Bias', shape=shape, initializer=tf.constant_initializer(0.1) , trainable=True, regularizer=self.Regloss_l2)
-
-                #if self.Summary:
-                ##self.variable_summaries(biases)
             return biases
 
     def Relu(self, input):
         return tf.nn.relu(input, name='Relu')
 
-    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00000001):
+    def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, name=None):
         with tf.name_scope('Conv') as scope:
-            #weight_decay=0.00002
+            #weight_decay=0.00002 0.000001
             if batch_type is None:
                 batch_type=self.State
 
@@ -80,7 +73,10 @@ class Builder(object):
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape, weight_decay)
-            final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
+            if name is None:
+                final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
+            else:
+                final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name=name) + bias
 
             if Activation: #Prepare for Resnet
                 final_conv = self.Relu(final_conv)
@@ -90,10 +86,14 @@ class Builder(object):
 
             return final_conv
 
-    def DConv_layer(self, input, *, batch_type=None, stride=[1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.000005, D_rate=1):
+    def DConv_layer(self, input, *, batch_type=None, stride=[1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, D_rate=1, name=None):
         with tf.name_scope('DConv') as scope:
-            dia_conv = tf.layers.conv2d(input, dilation_rate=[D_rate,D_rate], kernel_size=[3,3], filters=filters, strides=stride,padding=padding,\
-                kernel_initializer= tf.contrib.layers.xavier_initializer())
+            if name is None:
+                dia_conv = tf.layers.conv2d(input, dilation_rate=[D_rate,D_rate], kernel_size=[3,3], filters=filters, strides=stride,padding=padding,\
+                    kernel_initializer= tf.contrib.layers.xavier_initializer())
+            else:
+                dia_conv = tf.layers.conv2d(input, dilation_rate=[D_rate,D_rate], kernel_size=[3,3], filters=filters, strides=stride,padding=padding,\
+                    kernel_initializer= tf.contrib.layers.xavier_initializer(), name=name)
             return dia_conv
 
     def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
@@ -106,8 +106,6 @@ class Builder(object):
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape, weight_decay)
-            #final_shape  = [batch_size, output_shape[0], output_shape[1], int(filters)]
-            #final_shape= tf.convert_to_tensor([input.get_shape().as_list()[0], output_shape[0], output_shape[1], int(filters)])
             batch_size = tf.shape(input)[0]
             final_shape = tf.stack([batch_size, output_shape[0], output_shape[1], int(filters)])
             final_deconv = tf.nn.conv2d_transpose(input, weights, output_shape=final_shape, strides=stride, padding=padding)
@@ -120,7 +118,7 @@ class Builder(object):
 
             return final_deconv
 
-    def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=None, output_scale=2, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
+    def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=None, output_scale=2, padding='SAME', Batch_norm=False, Activation=False, weight_decay=0.0001, k_size=[3, 3]):
         '''Resize + conv layer mentioned in
         https://distill.pub/2016/deconv-checkerboard/ '''
 
@@ -131,9 +129,7 @@ class Builder(object):
             output_shape = [input_shape[1] * output_scale , input_shape[2] * output_scale]
             if filters is None:
                 filters= input_shape[3]
-            #upscaled_input = tf.image.resize_nearest_neighbor(input, output_shape)
-            upscaled_input = tf.image.resize_images(input, output_shape)
-            return upscaled_input
+            upscaled_input = tf.image.resize_nearest_neighbor(input, output_shape)
             final_reconv = self.Conv2d_layer(input=upscaled_input, batch_type=batch_type, stride=stride, filters=filters, padding=padding, Batch_norm=Batch_norm,\
                 Activation=Activation, weight_decay=weight_decay, k_size=k_size)
 
@@ -195,14 +191,11 @@ class Builder(object):
             weight = self.Weight_variable([input.get_shape().as_list()[1], int(filters)], weight_decay)
 
             proto_output = tf.matmul(input, weight) + bias;
-            #if self.Summary:
-            #tf.summary.histogram('Pre_activations', proto_output)
+
             if readout:
                 return(proto_output)
 
             final_output = tf.nn.relu(proto_output)
-            #if self.Summary:
-                #tf.summary.histogram('Final_activations', final_output)
             return(final_output)
 
 
@@ -237,24 +230,89 @@ class Builder(object):
             return tf.nn.batch_normalization(input, pop_mean, pop_var, beta, scale, epsilon, name="BN_TEST")
 
 
-    def Batch_norm(self, input, *, batch_type, decay=0.9997, epsilon=1e-3):
-        ''' https://r2rt.com/implementing-batch-normalization-in-tensorflow.html for an explanation of the code'''
-        with tf.name_scope('Batch_norm') as scope:
-            #with tf.variable_scope("Batch_norm") as var_scope:
-            #pop_mean = tf.Variable(tf.zeros([input.get_shape()[-1]]), trainable=False)
-            #pop_var = tf.Variable(tf.ones([input.get_shape()[-1]]), trainable=False)
-                #pop_mean = tf.get_variable(name="pop_mean", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer(), trainable=False)
-                #pop_var = tf.get_variable(name="pop_var", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer(), trainable=False)
-                
-                #scale = tf.get_variable(name="Bn_scale", shape=[input.get_shape()[-1]], initializer=tf.ones_initializer())
-                #beta = tf.get_variable(name="Bn_beta", shape=[input.get_shape()[-1]], initializer=tf.zeros_initializer())
-                #var_scope.reuse_variables()
-            #scale = tf.Variable(tf.ones([input.get_shape()[-1]]))
-            #beta = tf.Variable(tf.zeros([input.get_shape()[-1]]))
 
-            return tf.contrib.layers.batch_norm(inputs=input, center=True, scale=False, epsilon=0.001, is_training=tf.equal(batch_type, 'Train'), \
-                  renorm=True, renorm_clipping=self.renorm_dict, renorm_decay=0.99)
-            #return tf.cond(tf.equal(batch_type, 'TRAIN'), lambda: self._BN_TRAIN(input, pop_mean, pop_var, scale, beta, epsilon, decay), lambda: self._BN_TEST(input, pop_mean, pop_var, scale, beta, epsilon ))
+    
+    def _BN_CUS(self, input, decay=0.945, epsilon=0.001, is_training=True):
+        shape = input.get_shape().as_list()
+        scale = tf.Variable(tf.ones([shape[-1]]))
+        beta = tf.Variable(tf.zeros([shape[-1]]))
+        pop_mean = tf.Variable(tf.zeros([shape[-1]]), trainable=False)
+        pop_var = tf.Variable(tf.ones([shape[-1]]), trainable=False)
+
+        if is_training:
+            mean=None
+            variance=None
+        else:
+            mean =pop_mean
+            variance = pop_var
+
+        output, batch_m, batch_var = tf.nn.fused_batch_norm(x=input, offset=beta, scale=scale, epsilon=epsilon, is_training=is_training, mean=mean, variance=variance)
+
+        update_pop_avg=tf.assign(pop_mean, pop_mean*decay+batch_m*(1-decay))
+        update_pop_var=tf.assign(pop_var, pop_var*decay+batch_var*(1-decay))
+        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_pop_avg)
+        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_pop_var)
+        return output
+    
+    def BatchNorm_layer(self, x, scope, train, epsilon=0.001, decay=.99):
+        # Perform a batch normalization after a conv layer or a fc layer
+        # gamma: a scale factor
+        # beta: an offset
+        # epsilon: the variance epsilon - a small float number to avoid dividing by 0
+        with tf.variable_scope(scope, reuse=True):
+            with tf.variable_scope('BatchNorm', reuse=True) as bnscope:
+                gamma, beta = tf.get_variable("gamma"), tf.get_variable("beta")
+                moving_avg, moving_var = tf.get_variable("moving_avg"), tf.get_variable("moving_var")
+                shape = x.get_shape().as_list()
+                control_inputs = []
+                if train:
+                    avg, var = tf.nn.moments(x, range(len(shape)-1))
+                    update_moving_avg = moving_averages.assign_moving_average(moving_avg, avg, decay)
+                    update_moving_var = moving_averages.assign_moving_average(moving_var, var, decay)
+                    control_inputs = [update_moving_avg, update_moving_var]
+                else:
+                    avg = moving_avg
+                    var = moving_var
+                with tf.control_dependencies(control_inputs):
+                    output = tf.nn.batch_normalization(x, avg, var, offset=beta, scale=gamma, variance_epsilon=epsilon)
+        return output
+
+    def initialize_batch_norm(self, shape):
+        self.BNscope = self.BNscope+1
+        with tf.variable_scope("BATCHNM_" + str(self.BNscope)) as bnscope:
+                 gamma = tf.get_variable("gamma", shape[-1], initializer=tf.constant_initializer(1.0))
+                 beta = tf.get_variable("beta", shape[-1], initializer=tf.constant_initializer(0.0))
+                 moving_avg = tf.get_variable("moving_avg", shape[-1], initializer=tf.constant_initializer(0.0), trainable=False)
+                 moving_var = tf.get_variable("moving_var", shape[-1], initializer=tf.constant_initializer(1.0), trainable=False)
+                 bnscope.reuse_variables()
+
+    def Batch_norm(self, input, *, batch_type, decay=0.999, epsilon=0.001, train=True, scope=None):
+        shape = input.get_shape().as_list()
+        self.initialize_batch_norm(shape)
+        with tf.variable_scope("BATCHNM_" + str(self.BNscope), reuse=True) as bnscope:
+                gamma, beta = tf.get_variable("gamma"), tf.get_variable("beta")
+                avg, var = tf.nn.moments(input, [0, 1, 2])
+                moving_avg, moving_var = tf.get_variable("moving_avg"), tf.get_variable("moving_var")
+                
+                if self.debug:
+                    self.variable_summaries(moving_avg, 'MOVING_AVG')
+                    self.variable_summaries(moving_var, 'MOVING_VAR')
+                control_inputs = []
+                if train:
+                    if self.debug:
+                        self.debug = False
+                        self.variable_summaries(avg, 'Instant_AVG')
+                        self.variable_summaries(var, 'Instant_VAR')
+                    avg, var = tf.nn.moments(input, [0, 1, 2])
+                    update_moving_avg = tf.assign(moving_avg, moving_avg * decay + avg * (1- decay))
+                    update_moving_var = tf.assign(moving_var, moving_var * decay + var * (1- decay))
+                    control_inputs = [update_moving_avg, update_moving_var]
+                    with tf.control_dependencies(control_inputs):
+                        output = tf.nn.batch_normalization(input, avg, var, offset=beta, scale=gamma, variance_epsilon=epsilon)
+                        return output
+                else:
+                    output = tf.nn.batch_normalization(input, moving_avg, moving_var, offset=beta, scale=gamma, variance_epsilon=epsilon)
+                    return output
 
     def Concat(self, inputs, axis=3):
         with tf.name_scope('Concat') as scope:

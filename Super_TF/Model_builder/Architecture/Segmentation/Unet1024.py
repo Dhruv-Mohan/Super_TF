@@ -15,7 +15,8 @@ def Build_Unet1024(kwargs):
                 state_placeholder = tf.placeholder(tf.string, name="State")
                 input_reshape = unet_res_builder.Reshape_input(input_placeholder, \
                     width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
-                #batch_size = tf.slice(tf.shape(input_placeholder),[0],[1])
+
+
                 #Setting control params
                 unet_res_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
 
@@ -46,40 +47,27 @@ def Build_Unet1024(kwargs):
                         conv2 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
                         conv3 = unet_res_builder.Conv2d_layer(conv2, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
                         return conv3
-                        '''
-                        u_connect = unet_res_builder.Concat([encoder_connect, upscale_input])
-                        conv1 = unet_res_builder.Conv2d_layer(u_connect, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Batch_norm=True)
 
-
-                        conv1a_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[1, 1], filters=out_filters, Activation=False, Batch_norm=True)
-
-                        conv1b_split1 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
-                        conv2b_split1 = unet_res_builder.Conv2d_layer(conv1b_split1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Activation=False, Batch_norm=True)
-
-                        res_connect = unet_res_builder.Residual_connect([conv1a_split1, conv2b_split1])
-
-                        return res_connect
-                        '''
                 def Center_pool(input, filters=768):
                     ''' Dense dialations '''
                     with tf.name_scope('Dense_Dialated_Center'):
                         Dconv1 = unet_res_builder.DConv_layer(input, filters=filters, Batch_norm=True, D_rate=1, Activation=False)
-                        Dense_connect1 = unet_res_builder.Residual_connect([input, Dconv1])
+                        Dense_connect1 = unet_res_builder.Concat([input, Dconv1])
 
                         Dconv2 = unet_res_builder.DConv_layer(Dense_connect1, filters=filters, Batch_norm=True, D_rate=2, Activation=False)
-                        Dense_connect2 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2])
+                        Dense_connect2 = unet_res_builder.Concat([input, Dconv1, Dconv2])
 
                         Dconv4 = unet_res_builder.DConv_layer(Dense_connect2, filters=filters, Batch_norm=True, D_rate=4, Activation=False)
-                        Dense_connect3 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4 ])
+                        Dense_connect3 = unet_res_builder.Concat([input, Dconv1, Dconv2, Dconv4 ])
 
                         Dconv8 = unet_res_builder.DConv_layer(Dense_connect3, filters=filters, Batch_norm=True, D_rate=8, Activation=False)
-                        Dense_connect4 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8])
+                        Dense_connect4 = unet_res_builder.Concat([input, Dconv1, Dconv2, Dconv4, Dconv8])
 
                         Dconv16 = unet_res_builder.DConv_layer(Dense_connect4, filters=filters, Batch_norm=True, D_rate=16, Activation=False)
-                        Dense_connect5 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16])
+                        Dense_connect5 = unet_res_builder.Concat([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16])
 
                         Dconv32 = unet_res_builder.DConv_layer(Dense_connect5, filters=filters, Batch_norm=True, D_rate=32, Activation=False)
-                        Dense_connect6 = unet_res_builder.Residual_connect([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16, Dconv32])
+                        Dense_connect6 = unet_res_builder.Concat([input, Dconv1, Dconv2, Dconv4, Dconv8, Dconv16, Dconv32])
 
                         Scale_output = unet_res_builder.Scale_activations(Dense_connect6,scaling_factor=0.9)
 
@@ -121,30 +109,7 @@ def Build_Unet1024(kwargs):
                 Decode7 = stack_decoder(Decode6, Encoder1, out_filters=24, output_shape=[1024,1024], infilter=64)
                 output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
                 logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
-                '''
-                Encoder1 = stack_encoder(input_reshape, 128)
-                Pool1 = unet_res_builder.Pool_layer(Encoder1) #64
 
-                Encoder2 = stack_encoder(Pool1, 256)
-                Pool2 = unet_res_builder.Pool_layer(Encoder2) #32
-
-                Encoder3 = stack_encoder(Pool2, 512)
-                Pool3 = unet_res_builder.Pool_layer(Encoder3) #16
-
-                Encoder4 = stack_encoder(Pool3, 1024)
-                Pool4 = unet_res_builder.Pool_layer(Encoder4) #8
-
-                Conv_center = unet_res_builder.Conv2d_layer(Pool4, stride=[1, 1, 1, 1], filters=1024, Batch_norm=True, padding='SAME')
-
-                Decode1 = stack_decoder(Conv_center, Encoder4, out_filters=512, output_shape=[16, 16])
-                Decode2 = stack_decoder(Decode1, Encoder3, out_filters=256, output_shape=[32, 32])
-                Decode3 = stack_decoder(Decode2, Encoder2, out_filters=128, output_shape=[64, 64])
-                Decode4 = stack_decoder(Decode3, Encoder1, out_filters=64, output_shape=[128, 128])
-
-                output = unet_res_builder.Conv2d_layer(Decode4, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1]) #output
-                unet_res_builder.variable_summaries(output, name='output')
-                unet_res_builder.variable_summaries(input_placeholder, name='input')
-                '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
                     offset = 1e-5
@@ -191,4 +156,3 @@ def Build_Unet1024(kwargs):
                     #tf.summary.scalar('Focal loss', final_focal_loss)
                 return 'Segmentation'
                 return 'Segmentation'
-
