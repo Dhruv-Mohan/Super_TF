@@ -1,7 +1,7 @@
 from utils.builder import Builder
 import tensorflow as tf
 import os
-
+from Model_builder.Architecture.Segmentation.Pnet import Build_Pnet
 Segnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Segmentation'
 Classnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Classification'
 Seqnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Sequencegen'
