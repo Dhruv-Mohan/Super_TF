@@ -13,7 +13,7 @@ def Build_Inception_Resnet_v2a(kwargs):
                 input_reshape = inceprv2a_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
 
                 #Setting control params
-                inceprv2a_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                inceprv2a_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder, Renorm=True)
 
                 #Construct functional building blocks
                 def stem(input):
@@ -144,8 +144,11 @@ def Build_Inception_Resnet_v2a(kwargs):
                 Block_8 = incep_block8(Block_8, False)
                 #Normal Logits
                 with tf.name_scope('Logits'):
-                    model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1536, Batch_norm=True)
-                    model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')
+                    model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=512, Batch_norm=True) #1536
+                    model_conv_shape = model_conv.get_shape().as_list()
+                    model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, model_conv_shape[1], model_conv_shape[2], 1], stride=[1, model_conv_shape[1], model_conv_shape[2], 1], padding='SAME', pooling_type='AVG')
+                    #model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=512, Batch_norm=True) #1536
+                    model_conv = tf.reshape(model_conv, shape=[-1,  model_conv_shape[1]* model_conv_shape[2]  , model_conv_shape[3]])   #stacking heightwise for attention module
                     drop1 = inceprv2a_builder.Dropout_layer(model_avg_pool)
                     output = inceprv2a_builder.FC_layer(drop1, filters=kwargs['Classes'], readout=True)
                 '''
@@ -176,6 +179,7 @@ def Build_Inception_Resnet_v2a(kwargs):
                 tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
                 tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_Incepout', drop1)
+                tf.add_to_collection(kwargs['Model_name'] + '_Incepout_attn', model_conv)
                 tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
                 tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
                 return 'Classification'

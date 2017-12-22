@@ -287,3 +287,4 @@ __pycache__/
 /Super_TF/memory_util.py
 /Super_TF/Seq_Gen_Train.py
 /Super_TF/test.py
+/Super_TF/TrainVal.py

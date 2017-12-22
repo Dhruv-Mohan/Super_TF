@@ -101,16 +101,18 @@ class Model(object):
         tvs =all_trainable = [v for v in tf.trainable_variables() if 'Pnet' not in v.name]
         acc_grads = [tf.Variable(tf.zeros_like(tv.initialized_value()), trainable=False) for tv in tvs]
         self.reset_accumulated_grads = [tv.assign(tf.zeros_like(tv)) for tv in acc_grads]
-        
+        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         gvs, tvars = zip(*self.optimizer.compute_gradients(self.loss, tvs))
         #with tf.control_dependencies(update_ops):
-        self.accumulate_gradients = [acc_grads[i].assign_add(replace_none_with_zero(gv, acc_grads[i].get_shape().as_list())) for i, gv in enumerate(gvs)]
+        with tf.control_dependencies(update_ops):
+            self.accumulate_gradients = [acc_grads[i].assign_add(replace_none_with_zero(gv, acc_grads[i].get_shape().as_list())) for i, gv in enumerate(gvs)]
 
         if Gradient_norm is not None:
             gradients, _ = tf.clip_by_global_norm(acc_grads, Gradient_norm)
         else:
             gradients = acc_grads
 
+        
         self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
         
     def Construct_Model(self):
@@ -170,7 +172,8 @@ class Model(object):
             elif self.model_dict['Model_Type'] is 'Sequence' :
                 
                 correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.reshape(tf.cast(tf.reshape(self.model_dict['Output_ph'], shape=[-1]), tf.int64), [-1]))
-                pre_acc = tf.reduce_sum(tf.to_float(correct_prediction))
+                pre_acc = tf.to_float(correct_prediction) * tf.to_float(tf.reshape(self.model_dict['Mask'], [-1]))
+                pre_acc = tf.reduce_sum(pre_acc)
                 self.accuracy = tf.div(pre_acc,  tf.maximum(1.0,tf.reduce_sum(tf.to_float(tf.reshape(self.model_dict['Mask'], [-1])))))
                 tf.reduce_sum(tf.to_float(tf.reshape(self.model_dict['Mask'], [-1])))
                 self.accuracy_op = True
@@ -208,18 +211,21 @@ class Model(object):
                 self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
 
     def Set_initial_state(self, image, session=None):
+        
         if session is None:
             session = tf.get_default_session()
         lstm_init_dict = {self.model_dict['Input_ph']: image}
         init_feed_dict = {**lstm_init_dict, **self.test_dict}
-        self.initial_state_lstm = session.run(self.model_dict['Initial_state'], feed_dict=init_feed_dict)
-
+        output = session.run(self.Predict_op, feed_dict=init_feed_dict)
+        return(output)
+        
     def Get_LSTM_prediction(self, input_feed, session=None):
         if session is None:
             session = tf.get_default_session()
         lstm_predict_dict = {self.model_dict['Input_seq']: input_feed, self.model_dict['Lstm_state_feed']: self.initial_state_lstm}
         predict_feed_dict = {**lstm_predict_dict, **self.test_dict}
         output, self.initial_state_lstm = session.run([self.Predict_op, self.model_dict['Lstm_state']], feed_dict=predict_feed_dict)
+        print('output', output)
         return output
 
     def Try_restore(self,session=None):
@@ -266,7 +272,7 @@ class Model(object):
         self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-
+        
         for step in range(iterations):
             step = session.run([self.global_step])[0]
             session.run(self.reset_accumulated_grads)
@@ -290,7 +296,6 @@ class Model(object):
                     train_feed_dict = {**IO_feed_dict, **self.train_dict}
                 _,  loss,output = session.run([self.accumulate_gradients,  self.loss, self.Predict_op], feed_dict=train_feed_dict)
                 print(output)
-                
             #Train Step
             session.run(self.train_step)
             print ('Step: ',step+1,'Loss: ',loss)

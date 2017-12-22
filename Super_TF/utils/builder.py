@@ -14,6 +14,7 @@ class Builder(object):
         self.global_step = tf.get_collection('Global_Step')[0]
         self.BNscope = 0
         self.debug = True
+        self.renorm = None
     def __enter__(self):
         return self 
 
@@ -21,9 +22,10 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control= None, State= None, Rmax=3, Dmax=5, R_Iter=200*10, D_Iter=550*10):
+    def control_params(self, Dropout_control=None, State=None, Renorm=None, Rmax=3, Dmax=5, R_Iter=200*5*8*50, D_Iter=550*5*8*50):
         self.Dropout_control = Dropout_control
         self.State = State
+        self.renorm=Renorm
         self.construct_renorm_dict(Rmax=Rmax, Dmax=Dmax, R_Iter=R_Iter, D_Iter=D_Iter)
 
     def construct_renorm_dict(self, Rmax, Dmax, R_Iter, D_Iter):
@@ -179,12 +181,13 @@ class Builder(object):
             ret = tf.reshape(ret, [-1, output_shapeaslist[1], output_shapeaslist[2], output_shapeaslist[3]])
             return ret
 
-    def FC_layer(self, input, filters=1024, readout=False, weight_decay=0.00004): #Expects flattened layer
+    def FC_layer(self, input, filters=1024, readout=False, flatten=True, weight_decay=0.00004): #Expects flattened layer
         with tf.name_scope('FC') as scope:
 
             input_shape = input.get_shape().as_list()
-            if len(input_shape) > 2:
-                input = tf.reshape(input, [-1, input_shape[1] * input_shape[2] * input_shape[3]])
+            if flatten:
+                if len(input_shape) > 2:
+                    input = tf.reshape(input, [-1, input_shape[1] * input_shape[2] * input_shape[3]])
 
             bias = self.Bias_variable(filters, weight_decay)
 
@@ -287,32 +290,37 @@ class Builder(object):
                  bnscope.reuse_variables()
 
     def Batch_norm(self, input, *, batch_type, decay=0.999, epsilon=0.001, train=True, scope=None):
-        shape = input.get_shape().as_list()
-        self.initialize_batch_norm(shape)
-        with tf.variable_scope("BATCHNM_" + str(self.BNscope), reuse=True) as bnscope:
-                gamma, beta = tf.get_variable("gamma"), tf.get_variable("beta")
-                avg, var = tf.nn.moments(input, [0, 1, 2])
-                moving_avg, moving_var = tf.get_variable("moving_avg"), tf.get_variable("moving_var")
-                
-                if self.debug:
-                    self.variable_summaries(moving_avg, 'MOVING_AVG')
-                    self.variable_summaries(moving_var, 'MOVING_VAR')
-                control_inputs = []
-                if train:
-                    if self.debug:
-                        self.debug = False
-                        self.variable_summaries(avg, 'Instant_AVG')
-                        self.variable_summaries(var, 'Instant_VAR')
+        
+        if self.renorm is not None:
+            output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=train, renorm=True, renorm_clipping=self.renorm_dict)
+            return output
+        else:
+            shape = input.get_shape().as_list()
+            self.initialize_batch_norm(shape)
+            with tf.variable_scope("BATCHNM_" + str(self.BNscope), reuse=True) as bnscope:
+                    gamma, beta = tf.get_variable("gamma"), tf.get_variable("beta")
                     avg, var = tf.nn.moments(input, [0, 1, 2])
-                    update_moving_avg = tf.assign(moving_avg, moving_avg * decay + avg * (1- decay))
-                    update_moving_var = tf.assign(moving_var, moving_var * decay + var * (1- decay))
-                    control_inputs = [update_moving_avg, update_moving_var]
-                    with tf.control_dependencies(control_inputs):
-                        output = tf.nn.batch_normalization(input, avg, var, offset=beta, scale=gamma, variance_epsilon=epsilon)
+                    moving_avg, moving_var = tf.get_variable("moving_avg"), tf.get_variable("moving_var")
+                
+                    if self.debug:
+                        self.variable_summaries(moving_avg, 'MOVING_AVG')
+                        self.variable_summaries(moving_var, 'MOVING_VAR')
+                    control_inputs = []
+                    if train:
+                        if self.debug:
+                            self.debug = False
+                            self.variable_summaries(avg, 'Instant_AVG')
+                            self.variable_summaries(var, 'Instant_VAR')
+                        avg, var = tf.nn.moments(input, [0, 1, 2])
+                        update_moving_avg = tf.assign(moving_avg, moving_avg * decay + avg * (1- decay))
+                        update_moving_var = tf.assign(moving_var, moving_var * decay + var * (1- decay))
+                        control_inputs = [update_moving_avg, update_moving_var]
+                        with tf.control_dependencies(control_inputs):
+                            output = tf.nn.batch_normalization(input, avg, var, offset=beta, scale=gamma, variance_epsilon=epsilon)
+                            return output
+                    else:
+                        output = tf.nn.batch_normalization(input, moving_avg, moving_var, offset=beta, scale=gamma, variance_epsilon=epsilon)
                         return output
-                else:
-                    output = tf.nn.batch_normalization(input, moving_avg, moving_var, offset=beta, scale=gamma, variance_epsilon=epsilon)
-                    return output
 
     def Concat(self, inputs, axis=3):
         with tf.name_scope('Concat') as scope:
@@ -338,6 +346,14 @@ class Builder(object):
     def Lstm_cell(self, num_units=512, state_is_tuple=True):
         with tf.name_scope('Basic_LSTM_Cell') as scope:
             return(tf.contrib.rnn.BasicLSTMCell(num_units=num_units, state_is_tuple=state_is_tuple))
+
+
+    def Lstm_cell_LayerNorm(self, num_units=512, state_is_tuple=True, keep_prob=None):
+        with tf.name_scope('Basic_LSTM_Cell_LN') as scope:
+            if keep_prob is None:
+                keep_prob=self.Dropout_control
+            return(tf.contrib.rnn.LayerNormBasicLSTMCell(num_units=num_units, dropout_keep_prob=keep_prob))
+            
 
     def Rnn_dropout(self, input, keep_prob=None, seed=None):
         with tf.name_scope('Basic_RNN_Dropout') as scope:
