@@ -59,9 +59,12 @@ def Build_Im2txt(kwargs):
                     seq_embeddings = tf.nn.embedding_lookup(embeddings_map, input_seq_placeholder) 
 
 
-                    lstm_cell = im2txt_builder.Lstm_cell();
-                    lstm_cell = im2txt_builder.Rnn_dropout(lstm_cell)
+                    lstm_cell = im2txt_builder.Lstm_cell_LayerNorm()
 
+
+                    #lstm_cell = im2txt_builder.Lstm_cell();
+                    #lstm_cell = im2txt_builder.Rnn_dropout(lstm_cell)
+                    
                 with tf.variable_scope("lstm") as lstm_scope:
                     zero_state = lstm_cell.zero_state(batch_size=image_embeddings_size[0], dtype=tf.float32)
                     _, initial_stae = lstm_cell(image_embeddings, zero_state)
