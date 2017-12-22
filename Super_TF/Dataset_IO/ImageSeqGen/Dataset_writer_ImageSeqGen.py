@@ -16,6 +16,8 @@ class label_helper(object):
 
 
     def pad_generate_mask(self, seq, max_seq_length):
+        if type(seq) is float:
+            seq = str(int(seq))
         start_seq='$' + seq
         final_seq=start_seq + '#'
         pad_length = max_seq_length - len(final_seq)
@@ -28,6 +30,7 @@ class label_helper(object):
             else:
                 mask=mask+'0'
         self.seq_mask = mask
+        print('seq', mask)
         self.image_data = final_seq
 
 
@@ -105,6 +108,7 @@ class Dataset_writer_ImageSeqGen(Dataset_conifg_ImageSeqGen,Dataset_writer):
             self.mean_header_proto.Image_headers.image_count = total_images
 
             for index , image_container in enumerate(self.shuffled_images):
+                print(total_images)
                 printProgressBar(index+1, total_images)
                 im_rw = self.sess.run([image_raw, mean_assign],feed_dict={im_pth: image_container.image_path})
                 self.Param_dict[self._Seq_handle] = self._bytes_feature(str.encode(image_container.image_data))
