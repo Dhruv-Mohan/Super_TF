@@ -24,7 +24,7 @@ class Dataset_reader_ImageSeqGen(Dataset_reader, Dataset_conifg_ImageSeqGen):
                 self.vocab = vocab
 
             self.const_vocab_dict()
-
+            #self.random_angle = tf.Variable(tf.random_uniform(shape=[1], minval=-10, maxval=10, dtype=tf.float32),trainable=False)
             self.open_dataset(filename=filename, epochs=epochs)
             self.mean_header_proto = proto.Image_set()
             dataset_path, dataset_name = os.path.split(filename)
@@ -51,6 +51,11 @@ class Dataset_reader_ImageSeqGen(Dataset_reader, Dataset_conifg_ImageSeqGen):
         image.set_shape(self.image_shape)
         image = tf.image.convert_image_dtype(image, tf.float32)
         image = image - self.mean_image
+        image = tf.image.random_brightness(image, max_delta = 0.2)
+        image = tf.image.random_contrast(image, lower = 0.2, upper = 1.2)
+        image = tf.image.random_hue(image, max_delta = 0.1)
+        image = tf.image.rgb_to_grayscale(image)
+        image = tf.image.per_image_standardization(image)
         #Alright we've got images, now to get seqs and masks
         complete_seq =  features[self._Seq_handle]
         complete_mask = features[self._Seq_mask]

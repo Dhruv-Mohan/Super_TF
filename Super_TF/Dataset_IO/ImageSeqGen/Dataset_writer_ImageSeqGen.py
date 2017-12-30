@@ -18,6 +18,7 @@ class label_helper(object):
     def pad_generate_mask(self, seq, max_seq_length):
         if type(seq) is float:
             seq = str(int(seq))
+        seq = seq.upper()
         start_seq='$' + seq
         final_seq=start_seq + '#'
         pad_length = max_seq_length - len(final_seq)
