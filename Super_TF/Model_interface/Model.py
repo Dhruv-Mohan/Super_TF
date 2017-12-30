@@ -50,12 +50,12 @@ class Model(object):
                 tf.summary.scalar('Total', self.loss)
 
 
-    def Set_optimizer(self, starter_learning_rate=0.0001, decay_steps=100000, decay_rate=0.84, Fixed_LR=None, Optimizer='RMS', Optimizer_params=None, Gradient_norm=None): #0.0001
+    def Set_optimizer(self, starter_learning_rate=0.0001, decay_steps=100000, decay_rate=None, Optimizer='RMS', Optimizer_params=None, Gradient_norm=None): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
         def replace_none_with_zero(i, shape):
             return np.zeros(shape=shape) if i==None else i
 
-        if Fixed_LR is None:
+        if decay_rate is not None:
             learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=True)
         else:
             learning_rate = starter_learning_rate
@@ -79,6 +79,11 @@ class Model(object):
                 self.optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate, decay=Optimizer_params['decay'], momentum=Optimizer_params['momentum'], epsilon=Optimizer_params['epsilon'])
         elif Optimizer is 'SGD':
                 self.optimizer= tf.train.GradientDescentOptimizer(learning_rate)
+        elif Optimizer is 'MOM':
+            if Optimizer_params is None:
+                self.optimizer = tf.train.MomentumOptimizer(learning_rate, momentum=0.8)
+            else:
+                self.optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=Optimizer_params['momentum'], use_nesterov=Optimizer_params['Nestrov'])
 
 
         '''#Failed gpu memory saving experiment
@@ -139,9 +144,9 @@ class Model(object):
             self.model_dict['Mask'] = tf.get_collection(self.Model_name + '_Mask_ph')[0]
 
             if self.kwargs['State'] is 'Test':
-                self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')[0]
-                self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')[0]
-                self.model_dict['Lstm_state'] = tf.get_collection(self.Model_name + '_Lstm_state')[0]
+                self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')
+                self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')
+                self.model_dict['Lstm_state'] = tf.get_collection(self.Model_name + '_Lstm_state')
                 
 
 
@@ -272,7 +277,7 @@ class Model(object):
         self.merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-        
+        #self.global_step.initializer.run()
         for step in range(iterations):
             step = session.run([self.global_step])[0]
             session.run(self.reset_accumulated_grads)
