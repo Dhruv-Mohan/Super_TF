@@ -1,6 +1,7 @@
 from utils.builder import Builder
 import tensorflow as tf
-
+from tensorflow.contrib.slim.python.slim.nets.inception_resnet_v2 import inception_resnet_v2_base
+slim = tf.contrib.slim
 def Build_Inception_Resnet_v2a(kwargs):
         ''' Inception_Resnet_v2 as written in tf.slim attach issue link'''
         with tf.name_scope('Inception_Resnet_v2a_model'):
@@ -14,6 +15,19 @@ def Build_Inception_Resnet_v2a(kwargs):
 
                 #Setting control params
                 inceprv2a_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder, Renorm=True)
+                '''
+                batch_norm_params = {"is_training": True, "trainable": trainable, "decay": 0.997, "epsilon": 0.001, "variables_collections": {"beta": None, "gamma": None, "moving_mean": ["moving_vars"],"moving_variance": ["moving_vars"],} }
+                weights_regularizer = tf.contrib.layers.l2_regularizer(weight_decay)
+                with tf.variable_scope(scope, "Inception_resnet_v2", [input_reshape]) as scope:
+                    with slim.arg_scope([slim.conv2d, slim.fully_connected], weights_regularizer=weights_regularizer, trainable=true):
+                      with slim.arg_scope([slim.conv2d], weights_initializer=tf.truncated_normal_initializer(stddev=stddev), activation_fn=tf.nn.relu, normalizer_fn=slim.batch_norm, normalizer_params=batch_norm_params):
+                        net, end_points = inception_resnet_v2_base(input_reshape, scope=scope)
+                        with tf.variable_scope("logits"): shape = net.get_shape()
+                          net = slim.avg_pool2d(net, shape[1:3], padding="VALID", scope="pool")
+                          net = slim.dropout( net, keep_prob=dropout_keep_prob, is_training=is_inception_model_training, scope="dropout")
+                          net = slim.flatten(net, scope="flatten")
+                '''
+                
 
                 #Construct functional building blocks
                 def stem(input):
@@ -144,7 +158,7 @@ def Build_Inception_Resnet_v2a(kwargs):
                 Block_8 = incep_block8(Block_8, False)
                 #Normal Logits
                 with tf.name_scope('Logits'):
-                    model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=512, Batch_norm=True) #1536
+                    model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1024, Batch_norm=True) #1536
                     model_conv_shape = model_conv.get_shape().as_list()
                     model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, model_conv_shape[1], model_conv_shape[2], 1], stride=[1, model_conv_shape[1], model_conv_shape[2], 1], padding='SAME', pooling_type='AVG')
                     #model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=512, Batch_norm=True) #1536
