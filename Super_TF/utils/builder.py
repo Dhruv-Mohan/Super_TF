@@ -22,7 +22,7 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control=None, State=None, Renorm=None, Rmax=3, Dmax=5, R_Iter=200*5*8*50, D_Iter=550*5*8*50):
+    def control_params(self, Dropout_control=None, State=None, Renorm=None, Rmax=3, Dmax=5, R_Iter=200*5*50, D_Iter=550*5*50):
         self.Dropout_control = Dropout_control
         self.State = State
         self.renorm=Renorm
@@ -289,7 +289,7 @@ class Builder(object):
                  moving_var = tf.get_variable("moving_var", shape[-1], initializer=tf.constant_initializer(1.0), trainable=False)
                  bnscope.reuse_variables()
 
-    def Batch_norm(self, input, *, batch_type, decay=0.999, epsilon=0.001, train=True, scope=None):
+    def Batch_norm(self, input, *, batch_type, decay=0.92, epsilon=0.001, train=True, scope=None):
         
         if self.renorm is not None:
             output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=train, renorm=True, renorm_clipping=self.renorm_dict)
