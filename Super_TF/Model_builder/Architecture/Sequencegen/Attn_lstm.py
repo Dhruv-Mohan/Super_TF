@@ -95,7 +95,8 @@ def Build_Attn_lstm(kwargs):
                         sequence_length = tf.reduce_sum(mask_placeholder, 1) #Add sequence_mask 
                         #sequence_length = tf.constant(tf.ones(shape=[9])) *10
                         #lstm_outputs, _ =nn.dynamic_rnn(cell=lstm_cell, inputs=seq_embeddings, sequence_length=sequence_length, initial_state=initial_stae, dtype=tf.float32, scope=lstm_scope)
-                        helper = tf.contrib.seq2seq.TrainingHelper(inputs=seq_embeddings, sequence_length=[10,10,10,10,10,10,10,10,10,10])
+                        
+                        helper = tf.contrib.seq2seq.TrainingHelper(inputs=seq_embeddings, sequence_length=tf.tile([kwargs['Padded_length']], [10]))
 
                 output_layer = Dense(units=40, use_bias=False, name='output_proj')
                 decoder = tf.contrib.seq2seq.BasicDecoder(cell=lstm_cell, helper=helper, initial_state=initial_stae, output_layer=output_layer)
