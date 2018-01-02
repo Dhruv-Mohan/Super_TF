@@ -5,7 +5,7 @@ Simple framework to construct machine learning models with tensorflow
 SuperTF was initially conceived as a means to get familiar with Tensorflow by constructing machine learning models and executing the Tensorflow Tutorials
 
 I have expanded SuperTF overtime and now it has a suite of tools to help in:
-- Generation of  datasets as tfrecords files (Currently supports Semantic segmentation and Classification)
+- Generation of  datasets as tfrecords files (Currently supports Semantic segmentation, Classification and Sequence Generation)
 - Rapid Prototyping of Deep learning models
 - Network and Data visualization via tensorboard
 - Session management for extended training sessions
@@ -45,8 +45,9 @@ I've edited and added to certain network architectures to fulfill a certain nich
  Moreover the Full-Resolution Residual Network is enclosed in an encoder decoder pair with doubles the input and output resolution. 
 - P-Net
 - F-Net
-
+- Attn-Lstm
+  Attn_Lstm is a multilayer Long short term memory network with [BahdanauAttention](https://arxiv.org/abs/1409.0473). Initial state is set via feature vectors extracted from inception-resent-v2a. Used for image to text generation.
  ### Currently working on:
  
-  - Porting Im2Txt
+  - Impoving Attn_lstm
   - Preparing wrapper to work with both TF and Pytorch as backend 
