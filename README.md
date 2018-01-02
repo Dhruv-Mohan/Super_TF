@@ -32,7 +32,8 @@ I’ve added a several neural network architectures:
 ### Segmentation:
 - [Full-Resolution Residual Network-A](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/FRRN_A.py) - [Full-Resolution Residual Networks for Semantic Segmentation in Street Scenes](https://arxiv.org/abs/1611.08323)
  
-
+### Sequence-Generation:
+- Im2txt: Caption generation model ported from [Tensorflow im2txt](https://github.com/tensorflow/models/tree/master/research/im2txt/im2txt)
 ### Custom:
 I've edited and added to certain network architectures to fulfill a certain niche or to improve their performance. These networks are:
 - [Unet1024](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/Unet1024.py) - [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
