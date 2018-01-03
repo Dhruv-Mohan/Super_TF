@@ -43,7 +43,7 @@ I've edited and added to certain network architectures to fulfill a certain nich
 - [Full-Resolution Residual Network-C](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/FRRN_C.py) - [Full-Resolution Residual Networks for Semantic Segmentation in Street Scenes](https://arxiv.org/abs/1611.08323)
  
   FRRN-C is build upon FRRN-A. Here the center Full-Resolution residual block is replaced by densely conected block of dialated convolutions.
- Moreover the Full-Resolution Residual Network is enclosed in an encoder decoder pair with doubles the input and output resolution. 
+ Moreover the Full-Resolution Residual Network is enclosed in an encoder decoder pair which doubles the input and output resolution. 
 - P-Net
 - F-Net
 - Attn-Lstm
