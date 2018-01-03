@@ -16,7 +16,7 @@ Please refer to the examples for:
 - [Classification dataset reading](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Examples/Read_classification_dataset.py)
 - [Training LeNet](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Examples/LeNet.py)
 - [Training AlexNet](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Examples/AlexNet.py)
-  (Scemantic segmentation examples will be added shortly)
+  (Semantic segmentation examples will be added shortly)
 
 
 ## Included Network Architectures
@@ -33,7 +33,7 @@ I’ve added a several neural network architectures:
 - [Full-Resolution Residual Network-A](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/FRRN_A.py) - [Full-Resolution Residual Networks for Semantic Segmentation in Street Scenes](https://arxiv.org/abs/1611.08323)
  
 ### Sequence-Generation:
-- Im2txt: Caption generation model ported from [Tensorflow im2txt](https://github.com/tensorflow/models/tree/master/research/im2txt/im2txt)
+- [Im2txt](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Sequencegen/im2txt.py): Caption generation model ported from [Tensorflow im2txt](https://github.com/tensorflow/models/tree/master/research/im2txt/im2txt)
 ### Custom:
 I've edited and added to certain network architectures to fulfill a certain niche or to improve their performance. These networks are:
 - [Unet1024](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/Unet1024.py) - [U-Net: Convolutional Networks for Biomedical Image Segmentation](https://arxiv.org/abs/1505.04597)
@@ -44,9 +44,9 @@ I've edited and added to certain network architectures to fulfill a certain nich
  
   FRRN-C is build upon FRRN-A. Here the center Full-Resolution residual block is replaced by densely conected block of dialated convolutions.
  Moreover the Full-Resolution Residual Network is enclosed in an encoder decoder pair which doubles the input and output resolution. 
-- P-Net
-- F-Net
-- Attn-Lstm
+- [P-Net](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/Pnet.py)
+- [Fine-Net](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Segmentation/Fnet.py)
+- [Attn-Lstm](https://github.com/Dhruv-Mohan/Super_TF/blob/master/Super_TF/Model_builder/Architecture/Sequencegen/Attn_lstm.py)
   Attn_Lstm is a multilayer Long short term memory network with [BahdanauAttention](https://arxiv.org/abs/1409.0473). Initial state is set via feature vectors extracted from inception-resent-v2a. Used for image to text generation.
  ### Currently working on:
  
