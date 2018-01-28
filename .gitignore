@@ -290,3 +290,4 @@ __pycache__/
 /Super_TF/TrainVal.py
 /Super_TF/slim
 /Super_TF/slim/models
+/Super_TF/hairseg_train.py
