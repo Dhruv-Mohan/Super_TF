@@ -40,9 +40,9 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
         mask = tf.image.decode_image(features[self._Image_mask])
         mask_weight = tf.image.decode_image(features[self._Mask_weights])
         name = features[self._Image_name]
-        mask_weight.set_shape(self.image_shape)
+        mask_weight.set_shape(self.mask_shape)
         image.set_shape(self.image_shape)
-        mask.set_shape(self.image_shape)
+        mask.set_shape(self.mask_shape)
         
 
         image = tf.image.convert_image_dtype(image, tf.float32)
@@ -118,5 +118,5 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
             else:
                 self.sess = sess
             images, masks, mask_weights, names= self.sess.run([self.images, self.masks, self.mask_weights, self.names], feed_dict={self.batch_size : batch_size})
-            return images, masks, mask_weights, names[0].decode()
+            return images, masks,masks, names
 
