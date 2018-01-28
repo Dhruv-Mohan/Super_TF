@@ -65,6 +65,16 @@ class Builder(object):
     def Relu(self, input):
         return tf.nn.relu(input, name='Relu')
 
+    def Tanh(self, input):
+        return tf.nn.tanh(input, name='Tanh')
+
+    def Activation(self, input, Type='RELU'):
+        if Type is 'RELU':
+            return self.Relu(input)
+
+        elif Type is 'TANH':
+            return self.Tanh(input)
+
     def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, name=None):
         with tf.name_scope('Conv') as scope:
             #weight_decay=0.00002 0.000001
