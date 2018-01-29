@@ -91,6 +91,11 @@ class Builder(object):
             input_shape = input.get_shape().as_list()[3]
             weight_shape = k_size + [input_shape, int(filters)]
             weights = self.Weight_variable(weight_shape, weight_decay)
+            
+            if type(padding) is list:
+                input = tf.pad(input, padding, 'REFLECT')
+                padding='VALID'
+                
             if name is None:
                 final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name="CONV") + bias
             else:
