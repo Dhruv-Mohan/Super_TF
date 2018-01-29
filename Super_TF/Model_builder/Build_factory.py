@@ -5,12 +5,14 @@ from Model_builder.Architecture.Segmentation.Pnet import Build_Pnet
 Segnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Segmentation'
 Classnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Classification'
 Seqnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Sequencegen'
+Gans = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Gan'
 
 segnet_archs = os.listdir(Segnets)
 classnet_archs = os.listdir(Classnets)
 seqnet_archs = os.listdir(Seqnets)
+gan_archs = os.listdir(Gans)
 
-for segnet, classnet, seqnet in zip(segnet_archs, classnet_archs, seqnet_archs):
+for segnet, classnet, seqnet, gan in zip(segnet_archs, classnet_archs, seqnet_archs, gan_archs):
     if ".pyc" not in segnet and "__init__" not in segnet and ".py" in segnet:
         exec("from Model_builder.Architecture.Segmentation." + segnet[:-3] + " import *" )
 
@@ -19,6 +21,9 @@ for segnet, classnet, seqnet in zip(segnet_archs, classnet_archs, seqnet_archs):
 
     if ".pyc" not in  seqnet and "__init__" not in  seqnet and ".py" in  seqnet:
         exec("from Model_builder.Architecture.Sequencegen." + seqnet[:-3] + " import *" )
+
+    if ".pyc" not in  gan and "__init__" not in  gan and ".py" in  gan:
+        exec("from Model_builder.Architecture.Sequencegen." + gan[:-3] + " import *" )
 
 
 class Factory(object):

@@ -131,15 +131,23 @@ class Model(object):
         self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
         self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
         self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
-        self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
+        
 
         if self.model_dict['Model_Type'] is 'Segmentation' :
+            self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
             self.model_dict['Weight_ph'] = tf.get_collection(self.Model_name + '_Weight_ph')[0]
             self.prior_path = tf.get_collection(self.Model_name+'_Prior_path')
             if self.prior_path is not None:
                 self.prior_path = self.prior_path[0]
+            '''
+            self.prior_path = None
+            if self.prior_path is []:
+                print(self.prior_path)
+                self.prior_path = None
+            '''
 
         elif self.model_dict['Model_Type'] is 'Sequence':
+            self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
             self.model_dict['Input_seq'] = tf.get_collection(self.Model_name + '_Input_seq_ph')[0]
             self.model_dict['Mask'] = tf.get_collection(self.Model_name + '_Mask_ph')[0]
 
@@ -148,6 +156,8 @@ class Model(object):
                 self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')
                 self.model_dict['Lstm_state'] = tf.get_collection(self.Model_name + '_Lstm_state')
                 
+        elif self.model_dict['Model_Type'] is 'GAN':
+            print("GAN loading test")
 
 
     def Construct_Accuracy_op(self):
@@ -278,6 +288,7 @@ class Model(object):
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         #self.global_step.initializer.run()
+        #batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
         for step in range(iterations):
             step = session.run([self.global_step])[0]
             session.run(self.reset_accumulated_grads)
@@ -286,7 +297,7 @@ class Model(object):
             for i in range(micro_batch):
                 batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
                 print('Getting micro batch')
-                print(batch[2])
+                #print(batch[2])
                 IO_feed_dict = self.Construct_IO_dict(batch)            #Construct train dict
                 if self.prior_path is not None:                                 #Stop gap solution to accomodate F-Net
                     prior_path=batch[3]
