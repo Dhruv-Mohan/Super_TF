@@ -23,7 +23,7 @@ for segnet, classnet, seqnet, gan in zip(segnet_archs, classnet_archs, seqnet_ar
         exec("from Model_builder.Architecture.Sequencegen." + seqnet[:-3] + " import *" )
 
     if ".pyc" not in  gan and "__init__" not in  gan and ".py" in  gan:
-        exec("from Model_builder.Architecture.Sequencegen." + gan[:-3] + " import *" )
+        exec("from Model_builder.Architecture.Gan." + gan[:-3] + " import *" )
 
 
 class Factory(object):

@@ -14,7 +14,7 @@ def Build_Stargan(kwargs):
                     shape=[None, kwargs['Image_width'], kwargs['Image_height']], name='Mask')
                 gen_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
                 gen_state_placeholder = tf.placeholder(tf.string, name="State")
-                stargen_builder.control_params(Dropout_control = gen_dropout_prob_placeholder, State = gen_state_placeholder))
+                stargen_builder.control_params(Dropout_control = gen_dropout_prob_placeholder, State = gen_state_placeholder)
                 
                 def residual_unit(input, filters=256):
                     Conv_rl1 = stargen_builder.Conv2d_layer(input, k_size=[3, 3], stride=[1, 2, 2, 1], Batch_norm=True, filters=filters)
@@ -66,6 +66,12 @@ def Build_Stargan(kwargs):
                 Output_Dsrc = stardis_builder.Conv2d_layer(Dis_conv6, k_size=[3, 3], stride=[1, 2, 2, 1], filters=1, Activation=False)
                 Output_Dcls = stardis_builder.Conv2d_layer(Dis_conv6, k_size=[kwargs['Image_height']/64, kwargs['Image_width']/64], Activation=False)
 
+                #Graph Exports
+                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', gen_input_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', gen_output_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_Output', Output_gen)
+                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', gen_dropout_prob_placeholder)
+                tf.add_to_collection(kwargs['Model_name'] + '_State', gen_state_placeholder)
 
         return "GAN"
 
