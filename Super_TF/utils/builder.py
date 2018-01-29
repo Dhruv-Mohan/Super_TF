@@ -68,12 +68,18 @@ class Builder(object):
     def Tanh(self, input):
         return tf.nn.tanh(input, name='Tanh')
 
-    def Activation(self, input, Type='RELU'):
+    def Leaky_relu(self, input, alpha=0.01):
+        return tf.nn.leaky_relu(input, alpha=alpha)
+
+    def Activation(self, input, Type='RELU', alpha=0.01):
         if Type is 'RELU':
             return self.Relu(input)
 
         elif Type is 'TANH':
             return self.Tanh(input)
+
+        elif Type is 'LRELU':
+            return self.Leaky_relu(input, alpha)
 
     def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, name=None):
         with tf.name_scope('Conv') as scope:
