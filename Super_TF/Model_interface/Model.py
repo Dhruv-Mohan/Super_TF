@@ -126,14 +126,14 @@ class Model(object):
         print('Model Graph Keys')
         print(tf.get_default_graph().get_all_collection_keys())
 
-        self.model_dict['Input_ph'] = tf.get_collection(self.Model_name + '_Input_ph')[0]
-        self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
-        self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
-        self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
-        self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
+        #self.model_dict['Input_ph'] = tf.get_collection(self.Model_name + '_Input_ph')[0]
+        #self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
+        #self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
+        #self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
         
 
         if self.model_dict['Model_Type'] is 'Segmentation' :
+            self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
             self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
             self.model_dict['Weight_ph'] = tf.get_collection(self.Model_name + '_Weight_ph')[0]
             self.prior_path = tf.get_collection(self.Model_name+'_Prior_path')
@@ -147,6 +147,7 @@ class Model(object):
             '''
 
         elif self.model_dict['Model_Type'] is 'Sequence':
+            self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
             self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
             self.model_dict['Input_seq'] = tf.get_collection(self.Model_name + '_Input_seq_ph')[0]
             self.model_dict['Mask'] = tf.get_collection(self.Model_name + '_Mask_ph')[0]
