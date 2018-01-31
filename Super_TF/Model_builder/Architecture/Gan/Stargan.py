@@ -12,11 +12,14 @@ class Stargan(Base_Gan):
         self.gen_name = 'Stargan_generator'
         self.dis_name = 'Stargan_discriminator'
 
+        self.test_dict = self.construct_control_dict('TEST')
+        self.train_dict = self.construct_control_dict('TRAIN')
+
     def generator(self, gen_input, gen_class):
         with tf.variable_scope(self.gen_name):
             with Builder(**self.build_params) as stargen_builder:
                     
-                    stargen_builder.control_params(Dropout_control = self.gen_dropout_prob_placeholder, State = self.gen_state_placeholder, Share_var=True)
+                    stargen_builder.control_params(Dropout_control = self.gen_dropout_prob_placeholder, State = self.gan_state_placeholder, Share_var=True)
                 
                     def residual_unit(input, filters=256):
                         Conv_rl1 = stargen_builder.Conv2d_layer(input, k_size=[3, 3], Batch_norm=True, filters=filters)
@@ -45,7 +48,7 @@ class Stargan(Base_Gan):
     def discriminator(self, dis_input):
         with tf.variable_scope(self.dis_name):
             with Builder(**self.build_params) as stardis_builder:
-                    stardis_builder.control_params(Dropout_control=self.dis_dropout_prob_placeholder, State=self.dis_state_placeholder, Share_var=True)
+                    stardis_builder.control_params(Dropout_control=self.dis_dropout_prob_placeholder, State=self.gan_state_placeholder, Share_var=True)
 
                     Dis_conv1 = stardis_builder.Conv2d_layer(dis_input, k_size=[4, 4], stride=[1, 2, 2, 1], filters=64, padding=[[0, 0], [1, 1], [1, 1], [0, 0]], Activation=False)
                     Dis_conv1 = stardis_builder.Activation(Dis_conv1, Type='LRELU')
@@ -64,21 +67,15 @@ class Stargan(Base_Gan):
                     Output_Dcls = stardis_builder.Conv2d_layer(Dis_conv6, k_size=[ int(self.build_params['Image_height']/64), int(self.build_params['Image_width']/64)], Activation=False, padding='VALID')
                     return (Output_Dsrc, Output_Dcls)
 
-    def set_train_dict(self):
-        return super().set_train_dict()
-
-    def set_test_dict(self):
-        return super().set_test_dict()
-
     def set_accuracy_op(self):
         return super().set_accuracy_op()
 
     def construct_loss(self):
         with tf.variable_scope('Output', reuse=tf.AUTO_REUSE):
-            fake_gen_out = self.generator(self.gen_input_placeholder, self.gen_class_placeholder)
-            reconst_gen_out = self.generator(fake_gen_out, self.dis_class_placeholder) #Reconstruct given image from generated image
+            self.fake_gen_out = self.generator(self.gen_input_placeholder, self.gen_class_placeholder)
+            reconst_gen_out = self.generator(self.fake_gen_out, self.dis_class_placeholder) #Reconstruct given image from generated image
             real_outsrc, real_outcls = self.discriminator(self.gen_input_placeholder)
-            fake_outsrc, fake_outcls = self.discriminator(fake_gen_out)
+            fake_outsrc, fake_outcls = self.discriminator(self.fake_gen_out)
 
         with tf.variable_scope('Losses', reuse=tf.AUTO_REUSE):
             Dis_loss_real = -tf.reduce_mean(real_outsrc)
@@ -90,11 +87,19 @@ class Stargan(Base_Gan):
 
             #Gen loss
             Gen_loss_cls = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=fake_outcls, labels=self.dis_class_placeholder))
-            Gen_loss_rec = tf.reduce_mean(tf.abs(reconst_gen_out - fake_gen_out))
+            Gen_loss_rec = tf.reduce_mean(tf.abs(reconst_gen_out - self.fake_gen_out))
             self.Gen_loss = Gen_loss_rec - Dis_loss_fake + Gen_loss_cls
 
-    def construct_predict_op(self):
-        return self.generator(self.gen_input_placeholder, self.gen_class_placeholder)
+    def predict(self, kwargs):
+        if kwargs['session'] is None:
+            session = tf.get_default_session()
+        else:
+            session = kwargs['session']
+
+        predict_io_dict = self.Construct_IO_dict([kwargs['Input_Im'], kwargs['Out_Class']])
+        predict_feed_dict = {**predict_io_dict, **self.test_dict}
+        return session.run([self.fake_gen_out], feed_dict=predict_feed_dict)
+
 
     def set_train_ops(self, optimizer):
         gen_train_vars = [v for v in tf.trainable_variables() if self.gen_name in v.name]
@@ -102,6 +107,43 @@ class Stargan(Base_Gan):
         self.dis_stage1_op = optimizer.minimize(loss=self.Dis_stage1_loss, var_list=dis_train_vars, global_step=self.global_step)
         self.gen_loss_op  = optimizer.minimize(loss=self.Gen_loss, var_list=gen_train_vars, global_step=None)
 
+    def gen_random_lab(self, real_lab):
+        return real_lab #TODO: UPDATE TO GEN RANDOM VARIABLE
+
+    def Construct_IO_dict(self, batch):
+        return  {self.gen_input_placeholder: batch[0], self.dis_class_placeholder: batch[1],\
+           self.gen_class_placeholder: self.gen_random_lab(batch[1])}
 
     def train(self, kwargs):
-        return super().train()
+        if kwargs['session'] is None:
+            session = tf.get_default_session()
+        else:
+            session = kwargs['session']
+
+        IO_feed_dict = self.Construct_IO_dict(kwargs['batch'])
+        train_feed_dict = {**IO_feed_dict, **self.train_dict}
+        #Dis stage 1 
+        session.run([self.dis_stage1_op], feed_dict=train_feed_dict)
+        
+        #Dis stage 2
+
+
+        #Gen
+        session.run([self.gen_loss_op], feed_dict=train_feed_dict)
+
+    def test(self, kwargs):
+        if kwargs['session'] is None:
+            session = tf.get_default_session()
+        else:
+            session = kwargs['session']
+
+
+        IO_feed_dict = self.Construct_IO_dict(kwargs['batch'])
+        test_feed_dict = {**IO_feed_dict, **self.test_dict}
+
+        return session.run([kwargs['Merged'], self.global_step], \
+            feed_dict=test_feed_dict)
+
+
+
+            
