@@ -9,11 +9,7 @@ class Architect(ABC):
         self.global_step=tf.Variable(0, trainable=False, dtype=tf.int32, name='global_step')
 
     @abstractmethod
-    def set_train_dict(self):
-        pass
-
-    @abstractmethod
-    def set_test_dict(self):
+    def construct_control_dict(self):
         pass
 
     @abstractmethod
@@ -25,11 +21,15 @@ class Architect(ABC):
         pass
 
     @abstractmethod
-    def construct_predict_op(self):
+    def predict(self):
         pass
 
     @abstractmethod
     def construct_loss(self):
+        pass
+
+    @abstractmethod
+    def train(self):
         pass
 
     @abstractmethod
