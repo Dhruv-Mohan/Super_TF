@@ -1,21 +1,34 @@
-class Architect(object):
+from abc import ABC, abstractmethod
+
+class Architect(ABC):
     """Inherited by network architectures
         provides interface for functions used my model class
     """
+    @abstractmethod
+    def set_train_dict(self):
+        pass
 
-    def set_train_dict(self): {}
+    @abstractmethod
+    def set_test_dict(self):
+        pass
 
-    def set_test_dict(self): {}
+    @abstractmethod
+    def set_accuracy_op(self):
+        pass
 
-    def set_accuracy_op(self): {}
+    @abstractmethod
+    def set_train_ops(self):
+        pass
 
-    def set_train_ops(self): {}
+    @abstractmethod
+    def construct_predict_op(self):
+        pass
 
-    def predict(self): {}
+    @abstractmethod
+    def construct_loss(self):
+        pass
 
-    def build(self): {}
-
-    def set_loss(self): {}
-
-    def train(self): {}
+    @abstractmethod
+    def train(self):
+        pass
 

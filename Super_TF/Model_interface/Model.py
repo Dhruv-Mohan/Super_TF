@@ -1,6 +1,3 @@
-
-
-
 from Model_builder.Build_factory import Factory
 import tensorflow as tf
 import numpy as np
@@ -23,6 +20,7 @@ class Model(object):
         self.train_dict = {}
         self.model_dict={}
         self.accuracy_op = False
+        self.model_dict['Model_Type'] = None
 
     def Set_test_control(self, control_placeholders_dict):
         for key, value in control_placeholders_dict.items():
@@ -121,44 +119,16 @@ class Model(object):
         self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
         
     def Construct_Model(self):
-        self.model_dict['Model_Type'] = Factory(**self.kwargs).get_model()
+        self.NN_arch = Factory(**self.kwargs).get_model()
 
         print('Model Graph Keys')
-        print(tf.get_default_graph().get_all_collection_keys())
+        #print(tf.get_default_graph().get_all_collection_keys())
 
         #self.model_dict['Input_ph'] = tf.get_collection(self.Model_name + '_Input_ph')[0]
         #self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
         #self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
         #self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
-        
-
-        if self.model_dict['Model_Type'] is 'Segmentation' :
-            self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
-            self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
-            self.model_dict['Weight_ph'] = tf.get_collection(self.Model_name + '_Weight_ph')[0]
-            self.prior_path = tf.get_collection(self.Model_name+'_Prior_path')
-            if self.prior_path is not None:
-                self.prior_path = self.prior_path[0]
-            '''
-            self.prior_path = None
-            if self.prior_path is []:
-                print(self.prior_path)
-                self.prior_path = None
-            '''
-
-        elif self.model_dict['Model_Type'] is 'Sequence':
-            self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
-            self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
-            self.model_dict['Input_seq'] = tf.get_collection(self.Model_name + '_Input_seq_ph')[0]
-            self.model_dict['Mask'] = tf.get_collection(self.Model_name + '_Mask_ph')[0]
-
-            if self.kwargs['State'] is 'Test':
-                self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')
-                self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')
-                self.model_dict['Lstm_state'] = tf.get_collection(self.Model_name + '_Lstm_state')
-                
-        elif self.model_dict['Model_Type'] is 'GAN':
-            print("GAN loading test")
+        self.NN_arch.construct_loss()
 
 
     def Construct_Accuracy_op(self):

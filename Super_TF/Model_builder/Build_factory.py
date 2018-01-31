@@ -1,6 +1,8 @@
 from utils.builder import Builder
 import tensorflow as tf
 import os
+from Model_builder.Architecture.Gan.Stargan import Stargan
+'''
 from Model_builder.Architecture.Segmentation.Pnet import Build_Pnet
 Segnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Segmentation'
 Classnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Classification'
@@ -24,7 +26,7 @@ for segnet, classnet, seqnet, gan in zip(segnet_archs, classnet_archs, seqnet_ar
 
     if ".pyc" not in  gan and "__init__" not in  gan and ".py" in  gan:
         exec("from Model_builder.Architecture.Gan." + gan[:-3] + " import *" )
-
+'''
 
 class Factory(object):
     """Factory class to build DNN Architectures"""
@@ -33,7 +35,8 @@ class Factory(object):
     def get_model(self):
 
         print('Building ' + self.model_name+'()')
-        return (eval('Build_' + self.model_name+'(self.kwargs)'))
+        #return (eval('Build_' + self.model_name+'(self.kwargs)'))
+        return (eval(self.model_name+'(self.kwargs)'))
 
     def __init__(self, **kwargs):
         #TODO: WRITE ERROR HANDLER AND PARSER 
