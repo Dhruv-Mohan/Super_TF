@@ -1,23 +1,19 @@
 from utils.builder import Builder
 import tensorflow as tf
-from utils.Architect import Architect
+from utils.Base_Archs.Base_Gan import Base_Gan
 
-class Stargan(Architect):
+class Stargan(Base_Gan):
     def __init__(self, kwargs):
-        self.gen_input_placeholder = tf.placeholder(tf.float32, \
-            shape=[None, kwargs['Image_width'], kwargs['Image_height'], kwargs['Image_cspace']], name='Input')
+        super().__init__(kwargs)
         self.gen_class_placeholder = tf.placeholder(tf.float32, \
             shape=[None, kwargs['Image_width'], kwargs['Image_height']], name='Mask') #TODO: Epand class to input size and concat, fix class size
         self.dis_class_placeholder = tf.placeholder(tf.float32, \
             shape=[None, kwargs['Image_width'], kwargs['Image_height']], name='Mask') #TODO: Epand class to input size and concat, fix class size
-        self.build_params = kwargs
-        self.gen_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-        self.gen_state_placeholder = tf.placeholder(tf.string, name="State")
-        self.dis_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-        self.dis_state_placeholder = tf.placeholder(tf.string, name="State")
+        self.gen_name = 'Stargan_generator'
+        self.dis_name = 'Stargan_discriminator'
 
     def generator(self, gen_input, gen_class):
-        with tf.variable_scope('Stargan_generator'):
+        with tf.variable_scope(self.gen_name):
             with Builder(**self.build_params) as stargen_builder:
                     
                     stargen_builder.control_params(Dropout_control = self.gen_dropout_prob_placeholder, State = self.gen_state_placeholder, Share_var=True)
@@ -47,7 +43,7 @@ class Stargan(Architect):
                     return (Output_gen)
 
     def discriminator(self, dis_input):
-        with tf.variable_scope('Stargan_discriminator'):
+        with tf.variable_scope(self.dis_name):
             with Builder(**self.build_params) as stardis_builder:
                     stardis_builder.control_params(Dropout_control=self.dis_dropout_prob_placeholder, State=self.dis_state_placeholder, Share_var=True)
 
@@ -90,18 +86,22 @@ class Stargan(Architect):
             Dis_loss_cls =   tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=real_outcls, labels=self.dis_class_placeholder))
 
             #Dis loss stage1
-            Dis_stage1_loss = Dis_loss_cls + Dis_loss_fake + Dis_loss_real
+            self.Dis_stage1_loss = Dis_loss_cls + Dis_loss_fake + Dis_loss_real
 
             #Gen loss
             Gen_loss_cls = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=fake_outcls, labels=self.dis_class_placeholder))
             Gen_loss_rec = tf.reduce_mean(tf.abs(reconst_gen_out - fake_gen_out))
-            Gen_loss = Gen_loss_rec - Dis_loss_fake + Gen_loss_cls
+            self.Gen_loss = Gen_loss_rec - Dis_loss_fake + Gen_loss_cls
 
     def construct_predict_op(self):
         return self.generator(self.gen_input_placeholder, self.gen_class_placeholder)
 
-    def set_train_ops(self):
-        return super().set_train_ops()
+    def set_train_ops(self, optimizer):
+        gen_train_vars = [v for v in tf.trainable_variables() if self.gen_name in v.name]
+        dis_train_vars = [v for v in tf.trainable_variables() if self.dis_name in v.name]
+        self.dis_stage1_op = optimizer.minimize(loss=self.Dis_stage1_loss, var_list=dis_train_vars, global_step=self.global_step)
+        self.gen_loss_op  = optimizer.minimize(loss=self.Gen_loss, var_list=gen_train_vars, global_step=None)
 
-    def train(self):
+
+    def train(self, kwargs):
         return super().train()
