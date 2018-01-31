@@ -11,9 +11,8 @@ class Base_Gan(Architect):
             shape=[None, kwargs['Image_width'], kwargs['Image_height'], kwargs['Image_cspace']], name='Input')
         self.build_params = kwargs
         self.gen_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-        self.gen_state_placeholder = tf.placeholder(tf.string, name="State")
+        self.gan_state_placeholder = tf.placeholder(tf.string, name="State")
         self.dis_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-        self.dis_state_placeholder = tf.placeholder(tf.string, name="State")
 
     @abstractmethod
     def generator(self, kwargs):
@@ -23,4 +22,13 @@ class Base_Gan(Architect):
     def discriminator(self, kwargs):
         pass
 
+    def construct_control_dict(self, Type='TEST'):
+        if Type is 'TRAIN':
+            return {self.gen_dropout_prob_placeholder: self.build_params['Gen_Dropout'],\
+                self.dis_dropout_prob_placeholder: self.build_params['Dis_Dropout'],\
+                self.gan_state_placeholder: self.build_params['State']}
 
+        elif Type is 'TEST':
+            return {self.gen_dropout_prob_placeholder: 1,\
+                self.dis_dropout_prob_placeholder: 1,\
+                self.gan_state_placeholder: self.build_params['State']}
