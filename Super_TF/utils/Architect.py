@@ -1,9 +1,13 @@
 from abc import ABC, abstractmethod
+import tensorflow as tf
 
 class Architect(ABC):
     """Inherited by network architectures
         provides interface for functions used my model class
     """
+    def __init__(self):
+        self.global_step=tf.Variable(0, trainable=False, dtype=tf.int32, name='global_step')
+
     @abstractmethod
     def set_train_dict(self):
         pass
