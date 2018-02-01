@@ -2,6 +2,7 @@ import tensorflow as tf
 from utils.Architect import Architect
 from abc import abstractmethod
 
+
 class Base_Gan(Architect):
     """Base gan class, inherited by all Gan models"""
     Type = 'GAN'
@@ -32,3 +33,6 @@ class Base_Gan(Architect):
             return {self.gen_dropout_prob_placeholder: 1,\
                 self.dis_dropout_prob_placeholder: 1,\
                 self.gan_state_placeholder: self.build_params['State']}
+
+    def Construct_IO_dict(self):
+        pass
