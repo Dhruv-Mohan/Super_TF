@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import tensorflow as tf
 
+
 class Architect(ABC):
     """Inherited by network architectures
         provides interface for functions used my model class
@@ -33,6 +34,6 @@ class Architect(ABC):
         pass
 
     @abstractmethod
-    def train(self):
+    def test(self):
         pass
 
