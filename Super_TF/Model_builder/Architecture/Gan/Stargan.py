@@ -1,19 +1,43 @@
 from utils.builder import Builder
 import tensorflow as tf
 from utils.Base_Archs.Base_Gan import Base_Gan
+import random
+
 
 class Stargan(Base_Gan):
     def __init__(self, kwargs):
         super().__init__(kwargs)
-        self.gen_class_placeholder = tf.placeholder(tf.float32, \
-            shape=[None, kwargs['Image_width'], kwargs['Image_height']], name='Mask') #TODO: Epand class to input size and concat, fix class size
-        self.dis_class_placeholder = tf.placeholder(tf.float32, \
-            shape=[None, kwargs['Image_width'], kwargs['Image_height']], name='Mask') #TODO: Epand class to input size and concat, fix class size
+        self.gen_class_placeholder = tf.placeholder(tf.float32, shape=[None, 1, 1, self.build_params['Classes']], name='Gen_class')
+        self.dis_class_placeholder = tf.placeholder(tf.float32, shape=[None, 1, 1, self.build_params['Classes']], name='Dis_class')
+
         self.gen_name = 'Stargan_generator'
         self.dis_name = 'Stargan_discriminator'
 
         self.test_dict = self.construct_control_dict('TEST')
         self.train_dict = self.construct_control_dict('TRAIN')
+
+        # Losses
+        self.Dis_stage1_loss = None
+        self.Dis_stage2_loss = None
+        self.Gen_loss = None
+
+        # Train ops
+        self.dis_stage1_op = None
+        self.dis_stage2_op = None
+        self.gen_loss_op = None
+
+        # Output
+        self.fake_gen_out = None
+
+        # Alpha ops
+        self.alpha = tf.get_variable("Alpha", random.random(), trainable=False)
+
+        # Hyper_params
+        self.dis_cycles = 10
+        self.lambda_gp = 10
+        self.lambda_cls = 0
+
+
 
     def generator(self, gen_input, gen_class):
         with tf.variable_scope(self.gen_name):
@@ -73,7 +97,7 @@ class Stargan(Base_Gan):
     def construct_loss(self):
         with tf.variable_scope('Output', reuse=tf.AUTO_REUSE):
             self.fake_gen_out = self.generator(self.gen_input_placeholder, self.gen_class_placeholder)
-            reconst_gen_out = self.generator(self.fake_gen_out, self.dis_class_placeholder) #Reconstruct given image from generated image
+            reconst_gen_out = self.generator(self.fake_gen_out, self.dis_class_placeholder)  # Reconstruct given image from generated image
             real_outsrc, real_outcls = self.discriminator(self.gen_input_placeholder)
             fake_outsrc, fake_outcls = self.discriminator(self.fake_gen_out)
 
@@ -82,10 +106,19 @@ class Stargan(Base_Gan):
             Dis_loss_fake =  tf.reduce_mean(fake_outsrc)
             Dis_loss_cls =   tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=real_outcls, labels=self.dis_class_placeholder))
 
-            #Dis loss stage1
+            # Dis loss stage1
             self.Dis_stage1_loss = Dis_loss_cls + Dis_loss_fake + Dis_loss_real
 
-            #Gen loss
+            # Dis loss stage2
+            with tf.control_dependencies(self.alpha.initializer.run()):
+                interp = tf.scalar_mul(self.alpha, self.gen_input_placeholder) + tf.scalar_mul(1-self.alpha, self.fake_gen_out)
+
+            Dis_loss_intrp, _ = self.discriminator(interp)
+            grads = tf.gradients(Dis_loss_intrp, interp)
+            slopes = tf.sqrt(tf.reduce_sum(tf.square(grads), reduction_indices=[1]))
+            self.Dis_stage2_loss = tf.reduce_mean((slopes - 1.) ** 2) * self.lambda_gp
+
+            # Gen loss
             Gen_loss_cls = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=fake_outcls, labels=self.dis_class_placeholder))
             Gen_loss_rec = tf.reduce_mean(tf.abs(reconst_gen_out - self.fake_gen_out))
             self.Gen_loss = Gen_loss_rec - Dis_loss_fake + Gen_loss_cls
@@ -104,15 +137,22 @@ class Stargan(Base_Gan):
     def set_train_ops(self, optimizer):
         gen_train_vars = [v for v in tf.trainable_variables() if self.gen_name in v.name]
         dis_train_vars = [v for v in tf.trainable_variables() if self.dis_name in v.name]
-        self.dis_stage1_op = optimizer.minimize(loss=self.Dis_stage1_loss, var_list=dis_train_vars, global_step=self.global_step)
-        self.gen_loss_op  = optimizer.minimize(loss=self.Gen_loss, var_list=gen_train_vars, global_step=None)
+        self.dis_stage1_op = optimizer.minimize(loss=self.Dis_stage1_loss, var_list=dis_train_vars,
+                                                global_step=self.global_step)
+        self.dis_stage2_op = optimizer.minimize(loss=self.Dis_stage2_loss, var_list=dis_train_vars,
+                                                global_step=None)
+        self.gen_loss_op = optimizer.minimize(loss=self.Gen_loss, var_list=gen_train_vars, global_step=None)
 
     def gen_random_lab(self, real_lab):
-        return real_lab #TODO: UPDATE TO GEN RANDOM VARIABLE
+        cls_idx = random.randrange(self.build_params['Classes'])
+        one_hot_vec = tf.one_hot(cls_idx, self.build_params['Classes'])
+        for i in range(3):
+            one_hot_vec = tf.expand_dims(one_hot_vec, 0)
+        return one_hot_vec
 
     def Construct_IO_dict(self, batch):
-        return  {self.gen_input_placeholder: batch[0], self.dis_class_placeholder: batch[1],\
-           self.gen_class_placeholder: self.gen_random_lab(batch[1])}
+        return  {self.gen_input_placeholder: batch[0], self.dis_class_placeholder: batch[1], self.gen_class_placeholder:
+            self.gen_random_lab(batch[1])}
 
     def train(self, kwargs):
         if kwargs['session'] is None:
@@ -120,13 +160,16 @@ class Stargan(Base_Gan):
         else:
             session = kwargs['session']
 
-        IO_feed_dict = self.Construct_IO_dict(kwargs['batch'])
-        train_feed_dict = {**IO_feed_dict, **self.train_dict}
-        #Dis stage 1 
-        session.run([self.dis_stage1_op], feed_dict=train_feed_dict)
-        
-        #Dis stage 2
+        # Dis cycles
+        for i in range(self.dis_cycles):
+            batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+            IO_feed_dict = self.Construct_IO_dict(batch)
+            train_feed_dict = {**IO_feed_dict, **self.train_dict}
+            #Dis stage 1
+            session.run([self.dis_stage1_op], feed_dict=train_feed_dict)
 
+            #Dis stage 2
+            session.run([self.dis_stage2_op], feed_dict=train_feed_dict)
 
         #Gen
         session.run([self.gen_loss_op], feed_dict=train_feed_dict)
@@ -137,13 +180,9 @@ class Stargan(Base_Gan):
         else:
             session = kwargs['session']
 
-
-        IO_feed_dict = self.Construct_IO_dict(kwargs['batch'])
+        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        IO_feed_dict = self.Construct_IO_dict(batch)
         test_feed_dict = {**IO_feed_dict, **self.test_dict}
 
         return session.run([kwargs['Merged'], self.global_step], \
             feed_dict=test_feed_dict)
-
-
-
-            
