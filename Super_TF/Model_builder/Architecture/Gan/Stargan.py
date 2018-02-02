@@ -129,7 +129,7 @@ class Stargan(Base_Gan):
         else:
             session = kwargs['session']
 
-        predict_io_dict = self.Construct_IO_dict([kwargs['Input_Im'], kwargs['Out_Class']])
+        predict_io_dict = self.construct_IO_dict([kwargs['Input_Im'], kwargs['Out_Class']])
         predict_feed_dict = {**predict_io_dict, **self.test_dict}
         return session.run([self.fake_gen_out], feed_dict=predict_feed_dict)
 
@@ -150,7 +150,7 @@ class Stargan(Base_Gan):
             one_hot_vec = tf.expand_dims(one_hot_vec, 0)
         return one_hot_vec
 
-    def Construct_IO_dict(self, batch):
+    def construct_IO_dict(self, batch): # need to write predict io dict too
         return  {self.gen_input_placeholder: batch[0], self.dis_class_placeholder: batch[1], self.gen_class_placeholder:
             self.gen_random_lab(batch[1])}
 
