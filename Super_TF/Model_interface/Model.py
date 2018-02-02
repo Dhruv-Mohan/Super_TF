@@ -3,10 +3,10 @@ import tensorflow as tf
 import numpy as np
 import cv2
 import os
+
+
 class Model(object):
     """This class contains the model architecture, optimizer and loss function"""
-
-
     def __init__(self, **kwargs):
         self.Model_name = kwargs['Model_name']
         print(self.Model_name)
