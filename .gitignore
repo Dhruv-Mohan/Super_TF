@@ -291,3 +291,4 @@ __pycache__/
 /Super_TF/slim
 /Super_TF/slim/models
 /Super_TF/hairseg_train.py
+/Super_TF/Stargan.py
