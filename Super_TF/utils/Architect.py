@@ -8,6 +8,7 @@ class Architect(ABC):
     """
     def __init__(self):
         self.global_step=tf.Variable(0, trainable=False, dtype=tf.int32, name='global_step')
+        tf.add_to_collection('Global_Step', self.global_step)
 
     @abstractmethod
     def construct_control_dict(self):

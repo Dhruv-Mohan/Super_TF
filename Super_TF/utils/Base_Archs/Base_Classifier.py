@@ -67,6 +67,7 @@ class Base_Classifier(Architect):
         return session.run([self.output], feed_dict=predict_feed_dict)
 
     def construct_loss(self):
+        self.set_output()
         self.CBE_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.output_placeholder, logits=self.output))
 
     def train(self, kwargs):
@@ -94,4 +95,6 @@ class Base_Classifier(Architect):
             summary, _ = session.run([kwargs['merged'], self.accuracy], feed_dict={test_feed_dict})
 
         else:
-            summary, = session.run([kwargs['merged']], feed_dict={test_feed_dict})
+            summary = session.run([kwargs['merged']], feed_dict={test_feed_dict})
+
+        return summary
