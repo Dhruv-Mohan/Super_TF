@@ -22,6 +22,11 @@ class Base_Classifier(Architect):
         self.train_dict = None
         self.IO_dict = None
 
+        self.train_step = None
+        self.train_step = None
+
+        self.accuracy = None
+
     @abstractmethod
     def build_net(self):
         pass
@@ -35,17 +40,20 @@ class Base_Classifier(Architect):
             return{self.dropout_placeholder: 1, \
                    self.state_placeholder: self.build_params['State']}
 
+    def set_output(self):
+        self.output = self.build_net()
 
     def set_accuracy_op(self):
-        pass
+        correct_prediction = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.output_placeholder, 1))
+        false_images = tf.boolean_mask(self.model_dict['Reshaped_input'], tf.logical_not(correct_prediction))
+        tf.summary.image(name='False images', tensor=false_images)
+        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-
-    def set_train_ops(self):
-        pass
+    def set_train_ops(self, optimizer):
+        self.train_step = self.optimizer.minimize(self.CBE_loss, global_step=self.global_step)
 
     def construct_IO_dict(self, batch):
-        return  {self.input_placeholder: batch[0], self.dis_class_placeholder: batch[1], self.gen_class_placeholder:
-            self.gen_random_lab(batch[1])}
+        return {self.input_placeholder: batch[0], self.output_placeholder: batch[1]}
 
     def predict(self, kwargs):
         if kwargs['session'] is None:
@@ -57,15 +65,32 @@ class Base_Classifier(Architect):
         predict_feed_dict = {**predict_io_dict, **self.test_dict}
         return session.run([self.output], feed_dict=predict_feed_dict)
 
-
     def construct_loss(self):
         self.CBE_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.output_placeholder, logits=self.output))
 
+    def train(self, kwargs):
+        if kwargs['session'] is None:
+            session = tf.get_default_session()
+        else:
+            session = kwargs['session']
 
+        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        IO_feed_dict = self.construct_IO_dict(batch)
+        train_feed_dict = {**IO_feed_dict, **self.train_dict}
+        session.run([self.train_step], feed_dict=train_feed_dict)
 
-    def train(self):
-        pass
+    def test(self, kwargs):
+        if kwargs['session'] is None:
+            session = tf.get_default_session()
+        else:
+            session = kwargs['session']
 
+        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        IO_feed_dict = self.Construct_IO_dict(batch)
+        test_feed_dict = {**IO_feed_dict, **self.test_dict}
 
-    def test(self):
-        pass
+        if self.accuracy is not None:
+            summary, _ = session.run([kwargs['merged'], self.accuracy], feed_dict={test_feed_dict})
+
+        else:
+            summary, = session.run([kwargs['merged']], feed_dict={test_feed_dict})

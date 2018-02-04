@@ -15,7 +15,8 @@ class Model(object):
         tf.add_to_collection('Global_Step', self.global_step)
         self.initial_state_lstm= None
         self.prior_path=None
-        #Init class dicts
+
+        # Init class dicts
         self.test_dict = {}
         self.train_dict = {}
         self.model_dict={}
