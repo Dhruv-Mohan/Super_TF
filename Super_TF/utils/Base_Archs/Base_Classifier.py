@@ -2,6 +2,7 @@ import tensorflow as tf
 from utils.Architect import Architect
 from abc import abstractmethod
 
+
 class Base_Classifier(Architect):
     """Base classification network class, inherited by all classificaiton neural networks """
     Type = 'Classification'
