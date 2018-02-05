@@ -2,8 +2,7 @@ from Model_interface.Model import Model
 import tensorflow as tf
 from Dataset_IO.Classification.Dataset_reader_classification import Dataset_reader_classification
 
-
-_SUMMARY_           = False
+_SUMMARY_           =True
 _BATCH_SIZE_        = 50
 _IMAGE_WIDTH_       = 28
 _IMAGE_HEIGHT_      = 28
@@ -22,8 +21,7 @@ def writer_pre_proc(images):
     print('adding to graph')
     resized_images = tf.image.resize_images(images, size=[_IMAGE_HEIGHT_,_IMAGE_WIDTH_])
     rgb_image_float = tf.image.convert_image_dtype(resized_images, tf.float32) 
-    reshaped_images = tf.reshape(rgb_image_float,[-1,_IMAGE_HEIGHT_*_IMAGE_WIDTH_*_IMAGE_CSPACE_])
-    return reshaped_images
+    return rgb_image_float
 
 def main():
     ''' Main function'''
@@ -35,7 +33,7 @@ def main():
 
     #Construct model
     with tf.name_scope('LeNeT'):
-        Simple_DNN = Model(Model_name=_MODEL_NAME_, Summary=_SUMMARY_, \
+        Simple_DNN = Model(Model_name=_MODEL_NAME_, Summary=_SUMMARY_,\
             Batch_size=_BATCH_SIZE_, Image_width=_IMAGE_WIDTH_, Image_height=_IMAGE_HEIGHT_, Image_cspace=_IMAGE_CSPACE_, Classes=_CLASSES_, Save_dir=_SAVE_DIR_)
         Simple_DNN.Set_optimizer()
         Simple_DNN.Construct_Accuracy_op()
