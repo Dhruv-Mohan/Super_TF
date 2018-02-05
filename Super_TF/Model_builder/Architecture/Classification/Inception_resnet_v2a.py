@@ -1,7 +1,10 @@
 from utils.builder import Builder
 import tensorflow as tf
 from tensorflow.contrib.slim.python.slim.nets.inception_resnet_v2 import inception_resnet_v2_base
-slim = tf.contrib.slim
+
+class Inception_resnet_v2a():
+    pass
+
 def Build_Inception_Resnet_v2a(kwargs):
         ''' Inception_Resnet_v2 as written in tf.slim attach issue link'''
         with tf.name_scope('Inception_Resnet_v2a_model'):

@@ -1,7 +1,8 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-
+class Vgg19():
+    pass
 
 def Build_vgg19(kwargs):
         '''Add paper and brief description'''

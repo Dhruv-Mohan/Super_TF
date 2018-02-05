@@ -1,7 +1,8 @@
 from utils.builder import Builder
 import tensorflow as tf
 
-
+class Inception_resnet_v2py():
+    pass
 def Build_Inception_Resnet_v2(kwargs):
         ''' Inception-resnet-v2 as described in the paper'''
         with tf.name_scope('Inception_Resnet_v2_model'):
