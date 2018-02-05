@@ -13,8 +13,13 @@ class Builder(object):
         self.State = None
         self.global_step = tf.get_collection('Global_Step')[0]
         self.BNscope = 0
+        self.Conv_scope = 0
+        self.FC_scope = 0
+        self.Dconv_scope = 0
+        self.Resize_conv_scope = 0
         self.debug = True
         self.renorm = None
+        self.share_vars = False
     def __enter__(self):
         return self 
 
@@ -22,11 +27,13 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control=None, State=None, Renorm=None, Rmax=3, Dmax=5, R_Iter=200*5*50, D_Iter=550*5*50):
+    def control_params(self, Dropout_control=None, State=None, Renorm=None, Share_var = False, Rmax=3, Dmax=5, R_Iter=200*5*50, D_Iter=550*5*50):
         self.Dropout_control = Dropout_control
         self.State = State
         self.renorm=Renorm
-        self.construct_renorm_dict(Rmax=Rmax, Dmax=Dmax, R_Iter=R_Iter, D_Iter=D_Iter)
+        self.share_vars = Share_var
+        if self.renorm is not None:
+            self.construct_renorm_dict(Rmax=Rmax, Dmax=Dmax, R_Iter=R_Iter, D_Iter=D_Iter)
 
     def construct_renorm_dict(self, Rmax, Dmax, R_Iter, D_Iter):
         rmax = tf.Variable(1.0, trainable=False, name='Rmax', dtype=tf.float32)
@@ -47,19 +54,25 @@ class Builder(object):
         self.renorm_dict = {'rmax':rmax, 'rmin':0.0, 'dmax':dmax}
 
     def Weight_variable(self, shape, weight_decay=0.000004):
-        with tf.name_scope('Weight') as scope:
+        with tf.variable_scope('Weight') as scope:
             #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
             #initi = tf.contrib.layers.xavier_initializer()
             #initi = tf.orthogonal_initializer()
             initi = tf.random_uniform_initializer(minval=-0.08, maxval=0.08)
-            weights = tf.Variable(initi(shape))
+            if self.share_vars:
+                weights = tf.get_variable('weights', shape=shape, initializer=initi)
+            else:
+                weights = tf.Variable(initi(shape))
             tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights)* weight_decay)
             return weights
 
 
     def Bias_variable(self, shape, weight_decay=0.04):
-        with tf.name_scope('Bias') as scope:
-            biases = tf.Variable(tf.constant(0.01, shape=[int(shape)]))
+        with tf.variable_scope('Bias') as scope:
+            if self.share_vars:
+                biases = tf.get_variable('biases', shape=shape, initializer= tf.constant_initializer(0.01))
+            else:
+                biases = tf.Variable(tf.constant(0.01, shape=[int(shape)]))
             return biases
 
     def Relu(self, input):
@@ -82,7 +95,12 @@ class Builder(object):
             return self.Leaky_relu(input, alpha)
 
     def Conv2d_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, name=None):
-        with tf.name_scope('Conv') as scope:
+        
+        if name is None:
+            name = 'Conv' + str(self.Conv_scope)
+            self.Conv_scope = self.Conv_scope + 1
+        
+        with tf.variable_scope(name) as scope:
             #weight_decay=0.00002 0.000001
             if batch_type is None:
                 batch_type=self.State
@@ -110,7 +128,12 @@ class Builder(object):
             return final_conv
 
     def DConv_layer(self, input, *, batch_type=None, stride=[1, 1], k_size=[3, 3], filters=32, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, D_rate=1, name=None):
-        with tf.name_scope('DConv') as scope:
+        
+        if name is None:
+            name = 'DConv' + str(self.DConv_scope)
+            self.DConv_scope = self.DConv_scope + 1
+        
+        with tf.variable_scope(name) as scope:
             if name is None:
                 dia_conv = tf.layers.conv2d(input, dilation_rate=[D_rate,D_rate], kernel_size=[3,3], filters=filters, strides=stride,padding=padding,\
                     kernel_initializer= tf.contrib.layers.xavier_initializer())
@@ -120,6 +143,7 @@ class Builder(object):
             return dia_conv
 
     def Upconv_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=32, output_shape=None, padding='SAME', Batch_norm=False, Activation=True, weight_decay=0.00001, k_size=[3, 3]):
+        #TODO: add variale scope
         with tf.name_scope('Deconv') as scope:
 
             if batch_type is None:
@@ -141,11 +165,14 @@ class Builder(object):
 
             return final_deconv
 
-    def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=None, output_scale=2, padding='SAME', Batch_norm=False, Activation=False, weight_decay=0.0001, k_size=[3, 3]):
+    def Conv_Resize_layer(self, input, *, batch_type=None, stride=[1, 1, 1, 1], filters=None, output_scale=2, padding='SAME', Batch_norm=False, Activation=False, weight_decay=0.0001, k_size=[3, 3], name=None):
         '''Resize + conv layer mentioned in
         https://distill.pub/2016/deconv-checkerboard/ '''
+        if name is None:
+            name = 'Conv_Resize' + str(self.Resize_conv_scope)
+            self.Resize_conv_scope = self.Resize_conv_scope + 1
 
-        with tf.name_scope('Conv_Resize') as scope:
+        with tf.variable_scope(name) as scope:
             if batch_type is None:
                 batch_type=self.State
             input_shape = input.get_shape().as_list()
@@ -202,9 +229,13 @@ class Builder(object):
             ret = tf.reshape(ret, [-1, output_shapeaslist[1], output_shapeaslist[2], output_shapeaslist[3]])
             return ret
 
-    def FC_layer(self, input, filters=1024, readout=False, flatten=True, weight_decay=0.00004): #Expects flattened layer
-        with tf.name_scope('FC') as scope:
+    def FC_layer(self, input, filters=1024, readout=False, flatten=True, weight_decay=0.00004, name=None): #Expects flattened layer
 
+        if name is None:
+            name = 'FC' + str(self.FC_scope)
+            self.FC_scope = self.FC_scope + 1
+
+        with tf.variable_scope(name) as scope:
             input_shape = input.get_shape().as_list()
             if flatten:
                 if len(input_shape) > 2:

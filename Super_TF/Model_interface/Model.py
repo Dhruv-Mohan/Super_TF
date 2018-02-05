@@ -1,54 +1,20 @@
-
-
-
 from Model_builder.Build_factory import Factory
 import tensorflow as tf
 import numpy as np
 import cv2
 import os
+
+
 class Model(object):
     """This class contains the model architecture, optimizer and loss function"""
-
-
     def __init__(self, **kwargs):
         self.Model_name = kwargs['Model_name']
         print(self.Model_name)
         self.kwargs = kwargs
-        self.global_step=tf.Variable(0, trainable=False, dtype=tf.int32, name='global_step')
-        tf.add_to_collection('Global_Step', self.global_step)
-        self.initial_state_lstm= None
-        self.prior_path=None
-        #Init class dicts
-        self.test_dict = {}
-        self.train_dict = {}
-        self.model_dict={}
-        self.accuracy_op = False
-
-    def Set_test_control(self, control_placeholders_dict):
-        for key, value in control_placeholders_dict.items():
-            self.test_dict[self.model_dict[key]] = value
-
-
-    def Set_train_control(self, control_placeholders_dict):
-        for key, value in control_placeholders_dict.items():
-            self.train_dict[self.model_dict[key]] = value
-
-
-    def Set_loss(self, Reg_loss=None):
-        with tf.name_scope("Loss"):
-            with tf.name_scope("Logit_Loss"):
-                loss = tf.get_collection(self.Model_name + '_Loss') #Getting losses from the graph
-            
-            if Reg_loss is None:
-                with tf.name_scope("Regularization_Loss"):
-                    regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-                    regularization_loss = tf.add_n(regularization_losses, name='regularization_loss')
-                    loss.append(regularization_loss)
-            
-            self.loss = tf.add_n(loss)
-            if self.kwargs['Summary']:
-                tf.summary.scalar('Total', self.loss)
-
+        self.NN_arch = self.Construct_Model()
+        self.global_step = tf.get_collection('Global_Step')[0]
+        self.optimizer = None
+        self.merged = None
 
     def Set_optimizer(self, starter_learning_rate=0.0001, decay_steps=100000, decay_rate=None, Optimizer='RMS', Optimizer_params=None, Gradient_norm=None): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
@@ -85,7 +51,8 @@ class Model(object):
             else:
                 self.optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=Optimizer_params['momentum'], use_nesterov=Optimizer_params['Nestrov'])
 
-
+        self.NN_arch.construct_loss()
+        self.NN_arch.set_train_ops(self.optimizer)
         '''#Failed gpu memory saving experiment
         vars = tf.trainable_variables()
         total_length = len(vars)/2
@@ -102,7 +69,7 @@ class Model(object):
         self.train_step2 = self.optimizer.minimize(self.loss,global_step=self.global_step, var_list=second_half)
         '''
         
-
+        """
         tvs =all_trainable = [v for v in tf.trainable_variables() if 'Pnet' not in v.name]
         acc_grads = [tf.Variable(tf.zeros_like(tv.initialized_value()), trainable=False) for tv in tvs]
         self.reset_accumulated_grads = [tv.assign(tf.zeros_like(tv)) for tv in acc_grads]
@@ -119,49 +86,15 @@ class Model(object):
 
         
         self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
-        
+        """
+
     def Construct_Model(self):
-        self.model_dict['Model_Type'] = Factory(**self.kwargs).get_model()
-
-        print('Model Graph Keys')
-        print(tf.get_default_graph().get_all_collection_keys())
-
-        self.model_dict['Input_ph'] = tf.get_collection(self.Model_name + '_Input_ph')[0]
-        self.model_dict['Output_ph'] = tf.get_collection(self.Model_name + '_Output_ph')[0]
-        self.model_dict['State'] = tf.get_collection(self.Model_name + '_State')[0]
-        self.model_dict['Dropout_prob_ph'] = tf.get_collection(self.Model_name + '_Dropout_prob_ph')[0]
-        self.model_dict['Output'] = tf.get_collection(self.Model_name + '_Output')[0]
-        
-
-        if self.model_dict['Model_Type'] is 'Segmentation' :
-            self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
-            self.model_dict['Weight_ph'] = tf.get_collection(self.Model_name + '_Weight_ph')[0]
-            self.prior_path = tf.get_collection(self.Model_name+'_Prior_path')
-            if self.prior_path is not None:
-                self.prior_path = self.prior_path[0]
-            '''
-            self.prior_path = None
-            if self.prior_path is []:
-                print(self.prior_path)
-                self.prior_path = None
-            '''
-
-        elif self.model_dict['Model_Type'] is 'Sequence':
-            self.model_dict['Reshaped_input'] = tf.get_collection(self.Model_name + '_Input_reshape')[0]
-            self.model_dict['Input_seq'] = tf.get_collection(self.Model_name + '_Input_seq_ph')[0]
-            self.model_dict['Mask'] = tf.get_collection(self.Model_name + '_Mask_ph')[0]
-
-            if self.kwargs['State'] is 'Test':
-                self.model_dict['Initial_state'] = tf.get_collection(self.Model_name + '_Initial_state')
-                self.model_dict['Lstm_state_feed'] = tf.get_collection(self.Model_name + '_Lstm_state_feed')
-                self.model_dict['Lstm_state'] = tf.get_collection(self.Model_name + '_Lstm_state')
-                
-        elif self.model_dict['Model_Type'] is 'GAN':
-            print("GAN loading test")
-
+        return Factory(**self.kwargs).get_model()
 
     def Construct_Accuracy_op(self):
         with tf.name_scope('accuracy'):
+            self.NN_arch.set_accuracy_op()
+            """
             if self.model_dict['Model_Type'] is 'Classification' :
                 correct_prediction = tf.equal(tf.argmax(self.model_dict['Output'], 1), tf.argmax(self.model_dict['Output_ph'], 1))
                 false_images = tf.boolean_mask(self.model_dict['Reshaped_input'], tf.logical_not(correct_prediction))
@@ -195,6 +128,7 @@ class Model(object):
                 tf.summary.scalar('accuracy', self.accuracy)
                 self.out_op = tf.argmax(self.model_dict['Output'], 1)
             #tf.cond(self.accuracy > 0.92, lambda: tf.summary.image(name='False images', tensor=false_images), lambda: tf.summary.tensor_summary(name='correct_predictions', tensor=correct_prediction))
+            """
 
     def Construct_Writers(self, session=None):
         #Get default session
@@ -204,26 +138,6 @@ class Model(object):
             session = tf.get_default_session()
 
         self.log_writer = tf.summary.FileWriter(self.kwargs['Save_dir'] + '/logs/', session.graph)
-
-
-    def Construct_IO_dict(self, batch):
-        if self.model_dict['Model_Type'] is 'Classification':
-            return {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1]}
-
-        elif self.model_dict['Model_Type'] is 'Segmentation':
-            return {self.model_dict['Input_ph']: batch[0], self.model_dict['Output_ph']: batch[1], self.model_dict['Weight_ph']: batch[2]}
-        
-        elif self.model_dict['Model_Type'] is 'Sequence':
-            return {self.model_dict['Input_ph']: batch[0], self.model_dict['Input_seq']: batch[1], self.model_dict['Output_ph']: batch[2], self.model_dict['Mask']: batch[3]}
-
-    def Construct_Predict_op(self):
-        with tf.name_scope('Predict'):
-            if self.model_dict['Model_Type'] is 'Classification':
-                self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
-            elif self.model_dict['Model_Type'] is 'Segmentation':
-                self.Predict_op = tf.sigmoid(self.model_dict['Output'])
-            elif self.model_dict['Model_Type'] is 'Sequence':
-                self.Predict_op = tf.argmax(self.model_dict['Output'], 1)
 
     def Set_initial_state(self, image, session=None):
         
@@ -255,25 +169,10 @@ class Model(object):
         else:
             print('Ckpt_not_found')
 
-    def Predict(self, input_data, prior_path, session=None):
-        #Get default session
-        if session is None:
-            session = tf.get_default_session()
-        #Construct Predict dict
-        if self.prior_path is not None:
-            IO_predict_dict = {self.model_dict['Input_ph']: input_data, self.prior_path :prior_path}
-        else:
-            IO_predict_dict = {self.model_dict['Input_ph']: input_data}
+    def Predict(self, kwargs):
+        return self.NN_arch.predict(kwargs)
 
-        #Construct Predict feed_dict
-        predict_feed_dict = {**IO_predict_dict, **self.test_dict}
-        out = session.run([self.Predict_op], feed_dict=predict_feed_dict)
-        return(out)
-
-
-
-
-    def Train_Iter(self, iterations, save_iterations, data, log_iteration=2, restore=True, session=None, micro_batch=2):
+    def Train_Iter(self, iterations, save_iterations=100, data=None, log_iteration=2, restore=True, session=None, micro_batch=2):
         #Get default session
         if session is None:
             session = tf.get_default_session()
@@ -284,11 +183,26 @@ class Model(object):
             self.Try_restore(session)
             print('Default session restored')
 
-        self.merged = tf.summary.merge_all()
+        merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-        #self.global_step.initializer.run()
-        #batch = data.next_batch(self.kwargs['Batch_size'])            #IO feed dict
+        self.global_step.initializer.run()
+
+        for step in range(iterations):
+            self.NN_arch.train(session=session, data=data, Batch_size=self.kwargs['Batch_size'])
+
+            if (step + 1) % save_iterations == 0:
+                print('Saving Checkpoint')
+                self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/' + self.Model_name + '.ckpt',
+                                global_step=self.global_step)
+
+            if (step + 1) % log_iteration == 0:
+                print('Logging')
+                test_out = self.NN_arch.test(session=session, data=data, Batch_size=self.kwargs['Batch_size'], merged=merged)
+                glo_step = session.run([self.global_step])[0]
+                self.log_writer.add_summary(test_out, glo_step)
+
+        """
         for step in range(iterations):
             step = session.run([self.global_step])[0]
             session.run(self.reset_accumulated_grads)
@@ -333,7 +247,7 @@ class Model(object):
                                 feed_dict=test_feed_dict)
                 self.log_writer.add_summary(summary, glo_step)
 
-
+        """
         coord.request_stop()
         coord.join(threads)
 
