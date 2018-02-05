@@ -9,7 +9,7 @@ class Base_Classifier(Architect):
 
     def __init__(self, kwargs):
         super().__init__()
-        self.input_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'] * kwargs['Image_height'] *
+        self.input_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'], kwargs['Image_height'],
                                                        kwargs['Image_cspace']], name='Input')
         self.output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
         self.build_params = kwargs
@@ -19,7 +19,6 @@ class Base_Classifier(Architect):
 
         self.CBE_loss = None
 
-        self.train_step = None
         self.train_step = None
 
         self.accuracy = None
@@ -42,7 +41,9 @@ class Base_Classifier(Architect):
 
     def set_accuracy_op(self):
         correct_prediction = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.output_placeholder, 1))
+        false_images = tf.boolean_mask(self.input_placeholder, tf.logical_not(correct_prediction))
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        tf.summary.image(name='False images', tensor=false_images)
         tf.summary.scalar('accuracy', self.accuracy)
 
     def set_train_ops(self, optimizer):
