@@ -2,6 +2,7 @@ from utils.builder import Builder
 import tensorflow as tf
 import os
 from Model_builder.Architecture.Gan.Stargan import Stargan
+from Model_builder.Architecture.Classification.Lenet import Lenet
 '''
 from Model_builder.Architecture.Segmentation.Pnet import Build_Pnet
 Segnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Segmentation'
