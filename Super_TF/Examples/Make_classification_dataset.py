@@ -2,11 +2,11 @@ import tensorflow as tf
 from Dataset_IO.Classification.Dataset_writer_classification import Dataset_writer_classification
 
 
-_IMAGE_WIDTH_       = 299
-_IMAGE_HEIGHT_      = 299
+_IMAGE_WIDTH_       = 28
+_IMAGE_HEIGHT_      = 28
 _IMAGE_CSPACE_      = 1
-_DATA_PATH_         = 'E:/DATA8c' #REPLACE WITH PATH TO FOLDER CONTAINING IMAGES
-_DATASET_NAME_      = 'Avctet.tfrecords'
+_DATA_PATH_         = 'G:/Datasets/mnist/testing' #REPLACE WITH PATH TO FOLDER CONTAINING IMAGES
+_DATASET_NAME_      = 'Mnist_test.tfrecords'
 
 '''
 A classification dataset writer must be given the path to a folder containing the dataset. 

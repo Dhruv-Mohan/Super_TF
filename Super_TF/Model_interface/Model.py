@@ -52,7 +52,7 @@ class Model(object):
                 self.optimizer = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=Optimizer_params['momentum'], use_nesterov=Optimizer_params['Nestrov'])
 
         self.NN_arch.construct_loss()
-        self.set_train_ops(self.optimizer)
+        self.NN_arch.set_train_ops(self.optimizer)
         '''#Failed gpu memory saving experiment
         vars = tf.trainable_variables()
         total_length = len(vars)/2
@@ -172,7 +172,7 @@ class Model(object):
     def Predict(self, kwargs):
         return self.NN_arch.predict(kwargs)
 
-    def Train_Iter(self, iterations, save_iterations, data, log_iteration=2, restore=True, session=None, micro_batch=2):
+    def Train_Iter(self, iterations, save_iterations=100, data=None, log_iteration=2, restore=True, session=None, micro_batch=2):
         #Get default session
         if session is None:
             session = tf.get_default_session()
@@ -183,7 +183,7 @@ class Model(object):
             self.Try_restore(session)
             print('Default session restored')
 
-        self.merged = tf.summary.merge_all()
+        merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         self.global_step.initializer.run()
@@ -197,8 +197,9 @@ class Model(object):
                                 global_step=self.global_step)
 
             if (step + 1) % log_iteration == 0:
-                test_out = self.NN_arch.test(session=session, data=data, Batch_size=self.kwargs['Batch_size'])
-                glo_step = session.run([self.global_step])
+                print('Logging')
+                test_out = self.NN_arch.test(session=session, data=data, Batch_size=self.kwargs['Batch_size'], merged=merged)
+                glo_step = session.run([self.global_step])[0]
                 self.log_writer.add_summary(test_out, glo_step)
 
         """

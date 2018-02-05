@@ -13,6 +13,9 @@ class Lenet(Base_Classifier):
     def __init__(self, kwargs):
         super().__init__(kwargs)
 
+    def construct_control_dict(self, Type = 'TEST'):
+        return {}
+
     def build_net(self):
         with tf.name_scope('LeNet_Model'):
             with Builder(**self.build_params) as lenet_builder:
