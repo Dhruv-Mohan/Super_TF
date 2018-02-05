@@ -28,13 +28,11 @@ class Base_Classifier(Architect):
         pass
 
     def construct_control_dict(self, Type='TEST'):
-        if Type.upper() is 'TRAIN':
-            return{self.dropout_placeholder: self.build_params['Dropout'],\
-                   self.state_placeholder: self.build_params['State']}
+        if Type.upper() in 'TRAIN':
+            return {self.dropout_placeholder: self.build_params['Dropout'], self.state_placeholder: self.build_params['State']}
 
-        elif Type.upper() is 'TEST':
-            return{self.dropout_placeholder: 1, \
-                   self.state_placeholder: self.build_params['State']}
+        elif Type.upper() in 'TEST':
+            return {self.dropout_placeholder: 1, self.state_placeholder: self.build_params['State']}
 
     def set_output(self):
         self.output = self.build_net()

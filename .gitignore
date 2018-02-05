@@ -295,3 +295,4 @@ __pycache__/
 /Super_TF/Lenet_test.py
 /Super_TF/Mnist_test_mean.proto
 /Super_TF/Mnist_train_mean.proto
+/Super_TF/Alexnet_test.py

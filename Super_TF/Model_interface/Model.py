@@ -25,7 +25,7 @@ class Model(object):
             learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=True)
         else:
             learning_rate = starter_learning_rate
-        if self.kwargs['Summary']:
+        if self.kwargs['Summary'] is True:
             tf.summary.scalar('Learning_rate', learning_rate)
         
         clip_min = - 1.0
