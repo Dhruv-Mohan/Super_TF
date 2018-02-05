@@ -292,3 +292,6 @@ __pycache__/
 /Super_TF/slim/models
 /Super_TF/hairseg_train.py
 /Super_TF/Stargan.py
+/Super_TF/Lenet_test.py
+/Super_TF/Mnist_test_mean.proto
+/Super_TF/Mnist_train_mean.proto
