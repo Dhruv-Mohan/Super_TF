@@ -50,5 +50,5 @@ I've edited and added to certain network architectures to fulfill a certain nich
   Attn_Lstm is a multilayer Long short term memory network with [BahdanauAttention](https://arxiv.org/abs/1409.0473). Initial state is set via feature vectors extracted from inception-resent-v2a. Used for image to text generation.
  ### Currently working on:
  
-  - Impoving Attn_lstm
+  - Upgrading architectures to individual classes
   - Preparing wrapper to work with both TF and Pytorch as backend 
