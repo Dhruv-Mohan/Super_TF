@@ -1,6 +1,6 @@
 from utils.builder import Builder
 import tensorflow as tf
-from tensorflow.contrib.slim.python.slim.nets.inception_resnet_v2 import inception_resnet_v2_base
+
 
 class Inception_resnet_v2a():
     pass
