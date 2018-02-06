@@ -4,7 +4,7 @@ from abc import abstractmethod
 
 
 class Base_Classifier(Architect):
-    """Base classification network class, inherited by all classificaiton neural networks """
+    """Base classification network class, inherited by all classification neural networks """
     Type = 'Classification'
 
     def __init__(self, kwargs):
