@@ -17,7 +17,7 @@ class Base_Classifier(Architect):
         self.state_placeholder = tf.placeholder(tf.string, name='State')
         self.output = None
 
-        self.CBE_loss = None
+        self.loss = []
 
         self.train_step = None
 
@@ -45,7 +45,8 @@ class Base_Classifier(Architect):
         tf.summary.scalar('accuracy', self.accuracy)
 
     def set_train_ops(self, optimizer):
-        self.train_step = optimizer.minimize(self.CBE_loss, global_step=self.global_step)
+        loss = tf.add_n(self.loss, 'Loss accu')
+        self.train_step = optimizer.minimize(loss, global_step=self.global_step)
 
     def construct_IO_dict(self, batch):
         return {self.input_placeholder: batch[0], self.output_placeholder: batch[1]}
@@ -63,8 +64,10 @@ class Base_Classifier(Architect):
     def construct_loss(self):
         if self.output is None:
             self.set_output()
-        self.CBE_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.output_placeholder, logits=self.output))
-        tf.summary.scalar('loss', self.CBE_loss)
+            cbe_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.output_placeholder,\
+                                                                                 logits=self.output))
+        self.loss.append(cbe_loss)
+        tf.summary.scalar('loss', cbe_loss)
 
     def train(self, **kwargs):
         if kwargs['session'] is None:
