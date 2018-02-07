@@ -21,7 +21,7 @@ class Base_Classifier(Architect):
 
         self.train_step = None
 
-        self.accuracy = None
+        self.accuracy = tf.Variable(0.0, trainable=False)
 
     @abstractmethod
     def build_net(self):
@@ -38,11 +38,12 @@ class Base_Classifier(Architect):
         self.output = self.build_net()
 
     def set_accuracy_op(self):
+        acc_decay = 0.99
         correct_prediction = tf.equal(tf.argmax(self.output, 1), tf.argmax(self.output_placeholder, 1))
         false_images = tf.boolean_mask(self.input_placeholder, tf.logical_not(correct_prediction))
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
         tf.summary.image(name='False images', tensor=false_images)
-        tf.summary.scalar('accuracy', self.accuracy)
+        tf.summary.scalar('accuracy', self.accuracy.assign(acc_decay * self.accuracy + (1 - acc_decay) * accuracy))
 
     def set_train_ops(self, optimizer):
         loss = tf.add_n(self.loss, 'Loss_accu')
