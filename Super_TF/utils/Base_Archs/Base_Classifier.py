@@ -45,7 +45,7 @@ class Base_Classifier(Architect):
         tf.summary.scalar('accuracy', self.accuracy)
 
     def set_train_ops(self, optimizer):
-        loss = tf.add_n(self.loss, 'Loss accu')
+        loss = tf.add_n(self.loss, 'Loss_accu')
         self.train_step = optimizer.minimize(loss, global_step=self.global_step)
 
     def construct_IO_dict(self, batch):
