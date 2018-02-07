@@ -15,20 +15,18 @@ classnet_archs = os.listdir(Classnets)
 seqnet_archs = os.listdir(Seqnets)
 gan_archs = os.listdir(Gans)
 
-for segnet, classnet, seqnet, gan in zip(segnet_archs, classnet_archs, seqnet_archs, gan_archs):
+for classnet in classnet_archs:
     #if ".pyc" not in segnet and "__init__" not in segnet and ".py" in segnet:
         #exec("from Model_builder.Architecture.Segmentation." + segnet[:-3] + " import " + segnet[:-3] )
 
     if ".pyc" not in  classnet and "__init__" not in  classnet and ".py" in  classnet:
-        print("alexnetstuff")
-        print("from Model_builder.Architecture.Classification." + classnet[:-3] + " import " + classnet[:-3] )
         exec("from Model_builder.Architecture.Classification." + classnet[:-3] + " import " + classnet[:-3] )
 
     #if ".pyc" not in  seqnet and "__init__" not in  seqnet and ".py" in  seqnet:
         #exec("from Model_builder.Architecture.Sequencegen." + seqnet[:-3] + " import " + seqnet[:-3] )
 
-    if ".pyc" not in  gan and "__init__" not in  gan and ".py" in  gan:
-        exec("from Model_builder.Architecture.Gan." + gan[:-3] + " import " + gan[:-3] )
+    #if ".pyc" not in  gan and "__init__" not in  gan and ".py" in  gan:
+        #exec("from Model_builder.Architecture.Gan." + gan[:-3] + " import " + gan[:-3] )
 
 
 class Factory(object):

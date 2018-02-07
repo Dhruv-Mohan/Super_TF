@@ -6,7 +6,7 @@ class Vgg19(Base_Classifier):
     """Vgg19 from the visual geometry group at Oxford as described in
     https://arxiv.org/pdf/1409.1556.pdf """
     def __init__(self, kwargs):
-        super().__init__(self, kwargs)
+        super().__init__(kwargs)
 
     def build_net(self):
         with tf.name_scope('Vgg19_model'):

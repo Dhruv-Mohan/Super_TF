@@ -18,8 +18,13 @@ class Builder(object):
         self.Dconv_scope = 0
         self.Resize_conv_scope = 0
         self.debug = True
-        self.renorm = None
+        self.renorm = False
         self.share_vars = False
+        self.renorm_dict = None
+        if kwargs['State'] in 'Train':
+            self.train = True
+        else:
+            self.train = False
     def __enter__(self):
         return self 
 
@@ -27,31 +32,31 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control=None, State=None, Renorm=None, Share_var = True, Rmax=3, Dmax=5, R_Iter=200*5*50, D_Iter=550*5*50):
+    def control_params(self, Dropout_control=None, State=None, Renorm=False, Share_var = True, Rmax=3, Dmax=5, R_Iter=200*5*50, D_Iter=550*5*50):
         self.Dropout_control = Dropout_control
         self.State = State
         self.renorm=Renorm
         self.share_vars = Share_var
-        if self.renorm is not None:
+        if self.renorm:
             self.construct_renorm_dict(Rmax=Rmax, Dmax=Dmax, R_Iter=R_Iter, D_Iter=D_Iter)
 
     def construct_renorm_dict(self, Rmax, Dmax, R_Iter, D_Iter):
-        rmax = tf.Variable(1.0, trainable=False, name='Rmax', dtype=tf.float32)
-        rmin = tf.Variable(0.99, trainable=False, name='Rmin', dtype=tf.float32)
-        dmax = tf.Variable(0.0, trainable=False, name='Dmax', dtype=tf.float32)
-        update_rmax = tf.cond(self.global_step<R_Iter, self.assign_add(rmax, 1, Rmax, R_Iter), self.make_noop).op
-        update_dmax = tf.cond(self.global_step<D_Iter, self.assign_add(dmax, 0, Dmax, D_Iter), self.make_noop).op
-        update_rmin = tf.cond(self.global_step<R_Iter, self.assign_inv(rmin, rmax), self.make_noop).op
+            rmax = tf.Variable(1.0, trainable=False, name='Rmax', dtype=tf.float32)
+            rmin = tf.Variable(0.99, trainable=False, name='Rmin', dtype=tf.float32)
+            dmax = tf.Variable(0.0, trainable=False, name='Dmax', dtype=tf.float32)
+            update_rmax = tf.cond(self.global_step<R_Iter, self.assign_add(rmax, 1, Rmax, R_Iter), self.make_noop).op
+            update_dmax = tf.cond(self.global_step<D_Iter, self.assign_add(dmax, 0, Dmax, D_Iter), self.make_noop).op
+            update_rmin = tf.cond(self.global_step<R_Iter, self.assign_inv(rmin, rmax), self.make_noop).op
 
-        tf.summary.scalar('rmax', rmax)
-        tf.summary.scalar('rmin', rmin)
-        tf.summary.scalar('dmax', dmax)
+            tf.summary.scalar('rmax', rmax)
+            tf.summary.scalar('rmin', rmin)
+            tf.summary.scalar('dmax', dmax)
         
-        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmax)
-        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_dmax)
-        tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmin)
+            tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmax)
+            tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_dmax)
+            tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_rmin)
         
-        self.renorm_dict = {'rmax':rmax, 'rmin':0.0, 'dmax':dmax}
+            self.renorm_dict = {'rmax':rmax, 'rmin':0.0, 'dmax':dmax}
 
     def Weight_variable(self, shape, weight_decay=0.000004):
         with tf.variable_scope('Weight') as scope:
@@ -63,7 +68,7 @@ class Builder(object):
                 weights = tf.get_variable('weights', shape=shape, initializer=initi)
             else:
                 weights = tf.Variable(initi(shape))
-            tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights)* weight_decay)
+                tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights)* weight_decay)
             return weights
 
 
@@ -341,10 +346,10 @@ class Builder(object):
                  moving_var = tf.get_variable("moving_var", shape[-1], initializer=tf.constant_initializer(1.0), trainable=False)
                  bnscope.reuse_variables()
 
-    def Batch_norm(self, input, *, batch_type, decay=0.92, epsilon=0.001, train=False, scope=None):
+    def Batch_norm(self, input, *, batch_type, decay=0.92, epsilon=0.001, scope=None):
         
         if self.renorm is not None:
-            output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=train, renorm=True, renorm_clipping=self.renorm_dict)
+            output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=self.train, renorm=True, renorm_clipping=self.renorm_dict)
             return output
         else:
             shape = input.get_shape().as_list()
@@ -361,7 +366,7 @@ class Builder(object):
                         self.variable_summaries(moving_avg, 'MOVING_AVG')
                         self.variable_summaries(moving_var, 'MOVING_VAR')
                     control_inputs = []
-                    if train:
+                    if self.train:
                         avg, var = tf.nn.moments(input, [0, 1, 2])
                         update_moving_avg = tf.assign(moving_avg, moving_avg * decay + avg * (1- decay))
                         update_moving_var = tf.assign(moving_var, moving_var * decay + var * (1- decay))

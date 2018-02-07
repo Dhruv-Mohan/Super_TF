@@ -26,11 +26,8 @@ class Model(object):
         else:
             learning_rate = starter_learning_rate
         if self.kwargs['Summary'] is True:
-            tf.summary.scalar('Learning_rate', learning_rate)
-        
-        clip_min = - 1.0
-        clip_max = 1.0
-        
+                tf.summary.scalar('Learning_rate', learning_rate)
+
         #Select Optimizer
         
         if Optimizer is 'ADAM':
@@ -190,6 +187,7 @@ class Model(object):
         
 
         for step in range(iterations):
+            print("iter")
             self.NN_arch.train(session=session, data=data, Batch_size=self.kwargs['Batch_size'])
 
             if (step + 1) % save_iterations == 0:
