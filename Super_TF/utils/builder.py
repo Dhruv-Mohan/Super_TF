@@ -355,14 +355,13 @@ class Builder(object):
                     moving_avg, moving_var = tf.get_variable("moving_avg"), tf.get_variable("moving_var")
                 
                     if self.debug:
+                        self.debug = False
+                        self.variable_summaries(avg, 'Instant_AVG')
+                        self.variable_summaries(var, 'Instant_VAR')
                         self.variable_summaries(moving_avg, 'MOVING_AVG')
                         self.variable_summaries(moving_var, 'MOVING_VAR')
                     control_inputs = []
                     if train:
-                        if self.debug:
-                            self.debug = False
-                            self.variable_summaries(avg, 'Instant_AVG')
-                            self.variable_summaries(var, 'Instant_VAR')
                         avg, var = tf.nn.moments(input, [0, 1, 2])
                         update_moving_avg = tf.assign(moving_avg, moving_avg * decay + avg * (1- decay))
                         update_moving_var = tf.assign(moving_var, moving_var * decay + var * (1- decay))
