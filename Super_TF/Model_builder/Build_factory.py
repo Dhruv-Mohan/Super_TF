@@ -5,10 +5,10 @@ from Model_builder.Architecture.Gan.Stargan import Stargan
 
 #from Model_builder.Architecture.Classification.Lenet import Lenet
 
-Segnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Segmentation'
-Classnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Classification'
-Seqnets = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Sequencegen'
-Gans = os.path.dirname(os.path.realpath(__file__)) +'\Architecture\Gan'
+Segnets = os.path.dirname(os.path.realpath(__file__)) +'/Architecture/Segmentation'
+Classnets = os.path.dirname(os.path.realpath(__file__)) +'/Architecture/Classification'
+Seqnets = os.path.dirname(os.path.realpath(__file__)) +'/Architecture/Sequencegen'
+Gans = os.path.dirname(os.path.realpath(__file__)) +'/Architecture/Gan'
 
 segnet_archs = os.listdir(Segnets)
 classnet_archs = os.listdir(Classnets)

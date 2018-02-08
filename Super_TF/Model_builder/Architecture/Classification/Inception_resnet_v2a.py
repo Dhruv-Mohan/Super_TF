@@ -165,10 +165,10 @@ class Inception_resnet_v2a(Base_Classifier):
 
     def set_train_ops(self, optimizer):
         loss = tf.add_n(self.loss, 'Loss_accu')
-        self.train_step = optimizer.minimize(loss, global_step=self.global_step)
-            #grads = tf.gradients(loss, tf.trainable_variables())
-            #nomed_grads, _ = tf.clip_by_global_norm(grads, self.build_params['Grad_norm'])
-            #self.train_step = optimizer.apply_gradients(zip(nomed_grads,  tf.trainable_variables()), global_step=self.global_step)
+        #self.train_step = optimizer.minimize(loss, global_step=self.global_step)
+        grads = tf.gradients(loss, tf.trainable_variables())
+        nomed_grads, _ = tf.clip_by_global_norm(grads, self.build_params['Grad_norm'])
+        self.train_step = optimizer.apply_gradients(zip(nomed_grads,  tf.trainable_variables()), global_step=self.global_step)
 
     def construct_loss(self):
         if self.output is None:

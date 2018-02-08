@@ -298,3 +298,4 @@ __pycache__/
 /Super_TF/Alexnet_test.py
 /Super_TF/Cifar10_test_mean.proto
 /Super_TF/Cifar10_train_mean.proto
+/Super_TF/Gptest.py
