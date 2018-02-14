@@ -67,7 +67,13 @@ class Base_Segnet(Architect):
         return session.run([self.output], feed_dict=predict_feed_dict)
 
     def construct_loss(self):
-        pass
+        #default loss is dice loss
+        eps = tf.constant(1e-5, name='Eps')
+        output = self.output + eps
+        intersection = tf.reduce_sum(output*self.output_placeholder, axis=1)
+        union = tf.reduce_sum(output, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1)
+        D_C = (2*intersection)/ union
+        self.loss.append(tf.reduce_mean(D_C))
 
     def train(self):
         pass
