@@ -101,4 +101,5 @@ class Unet1024(Base_Segnet):
                 Decode5 = stack_decoder(Decode4, Encoder3, out_filters=128, output_shape=[256, 256], infilter=256)
                 Decode6 = stack_decoder(Decode5, Encoder2, out_filters=64, output_shape=[512,512],  infilter=128)
                 Decode7 = stack_decoder(Decode6, Encoder1, out_filters=24, output_shape=[1024,1024], infilter=64)
-                self.output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
+                output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
+                return output

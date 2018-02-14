@@ -43,9 +43,10 @@ class Base_Segnet(Architect):
         self.output = self.build_net()
 
     def set_accuracy_op(self):
-        #onus of pre-proc probs lies on the network
-        intersection = tf.reduce_sum(self.output * self.output_placeholder, axis=1) #per instance
-        union = tf.reduce_sum(self.output, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1)
+        sigmoid = tf.nn.sigmoid(self.output)
+        sigmoid = tf.ceil(sigmoid- 0.5 + 1e-10)
+        intersection = tf.reduce_sum(sigmoid * self.output_placeholder, axis=1) #per instance
+        union = tf.reduce_sum(sigmoid, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1)
         self.accuracy = tf.reduce_mean((2*intersection)/union)
         tf.summary.scalar('Dice_Coeff', self.accuracy)
 
@@ -69,7 +70,7 @@ class Base_Segnet(Architect):
     def construct_loss(self):
         #default loss is dice loss
         eps = tf.constant(1e-5, name='Eps')
-        output = self.output + eps
+        output = tf.nn.sigmoid(self.output + eps)
         intersection = tf.reduce_sum(output*self.output_placeholder, axis=1)
         union = tf.reduce_sum(output, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1)
         D_C = (2*intersection) / union
