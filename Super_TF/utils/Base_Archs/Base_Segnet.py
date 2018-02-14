@@ -72,12 +72,39 @@ class Base_Segnet(Architect):
         output = self.output + eps
         intersection = tf.reduce_sum(output*self.output_placeholder, axis=1)
         union = tf.reduce_sum(output, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1)
-        D_C = (2*intersection)/ union
-        self.loss.append(tf.reduce_mean(D_C))
+        D_C = (2*intersection) / union
+        D_L = tf.reduce_mean(D_C)
+        tf.summary.scalar('Dice_loss', D_L)
+        self.loss.append(D_L)
 
-    def train(self):
-        pass
+    def train(self, **kwargs):
+        if kwargs['session'] is None:
+            session = tf.get_default_session()
+        else:
+            session = kwargs['session']
 
-    def test(self):
-        pass
+        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        IO_feed_dict = self.construct_IO_dict(batch)
+        train_dict = self.construct_control_dict(Type='Train')
+        train_feed_dict = {**IO_feed_dict, **train_dict}
+        session.run([self.train_step], feed_dict=train_feed_dict)
+
+    def test(self, **kwargs):
+        if kwargs['session'] is None:
+            session = tf.get_default_session()
+        else:
+            session = kwargs['session']
+
+        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        IO_feed_dict = self.construct_IO_dict(batch)
+        test_dict = self.construct_control_dict(Type='Test')
+        test_feed_dict = {**IO_feed_dict, **test_dict}
+
+        if self.accuracy is not None:
+            summary, _ = session.run([kwargs['merged'], self.accuracy], feed_dict=test_feed_dict)
+
+        else:
+            summary = session.run([kwargs['merged']], feed_dict=test_feed_dict)[0]
+
+        return summary
 
