@@ -46,8 +46,6 @@ class Base_Classifier(Architect):
         tf.summary.scalar('accuracy', self.accuracy.assign(acc_decay * self.accuracy + (1 - acc_decay) * accuracy))
 
     def set_train_ops(self, optimizer):
-        print("FROM BASE")
-        input('fgfd')
         loss = tf.add_n(self.loss, 'Loss_accu')
         self.train_step = optimizer.minimize(loss, global_step=self.global_step)
 
