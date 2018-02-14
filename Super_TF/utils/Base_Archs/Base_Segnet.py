@@ -43,6 +43,11 @@ class Base_Segnet(Architect):
         self.output = self.build_net()
 
     def set_accuracy_op(self):
+        #onus of pre-proc probs lies on the network
+        intersection = tf.reduce_sum(self.output * self.output_placeholder, axis=1) #per instance
+        union = tf.reduce_sum(self.output, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1)
+        self.accuracy = tf.reduce_mean((2*intersection)/union)
+        tf.summary.scalar('Dice_Coeff', self.accuracy)
         pass
 
     def set_train_ops(self):
