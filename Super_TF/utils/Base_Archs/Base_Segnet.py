@@ -13,9 +13,9 @@ class Base_Segnet(Architect):
         self.output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'], kwargs['Image_height'],
                                                        kwargs['Classes']], name='Output')
         if kwargs['Classes'] is 1:
-            self.sigmoid_loss = True
+            self.sigmoid = True
         else:
-            self.sigmoid_loss = False
+            self.sigmoid = False
 
         self.build_params = kwargs
         self.dropout_placeholder = tf.placeholder(tf.float32, name='Dropout')

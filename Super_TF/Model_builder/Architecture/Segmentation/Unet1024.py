@@ -1,24 +1,18 @@
 from utils.builder import Builder
 import tensorflow as tf
+from utils.Base_Archs.Base_Segnet import Base_Segnet
 
-def Build_Unet1024(kwargs):
-        '''Add paper and brief description'''
+class Unet1024(Base_Segnet):
+    """Unet based on Ronneberger et al. https://arxiv.org/pdf/1505.04597.pdf with default input size 1024x1024"""
+    def __init__(self, kwargs):
+        super().__init__(kwargs)
+
+    def build_net(self):
         with tf.name_scope('Unet1024'):
-            with Builder(**kwargs) as unet_res_builder:
-                input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Mask')
-                weight_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Weight')
-                dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = unet_res_builder.Reshape_input(input_placeholder, \
-                    width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
-
+            with Builder(**self.build_params) as unet_res_builder:
 
                 #Setting control params
-                unet_res_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                unet_res_builder.control_params(Dropout_control=self.dropout_placeholder_placeholder, State=self.state_placeholder)
 
                 def stack_encoder(input, out_filters):
                     with tf.name_scope('Encoder'):
@@ -74,7 +68,7 @@ def Build_Unet1024(kwargs):
                         return Scale_output
                 #Build Encoder
                 
-                Encoder1 = stack_encoder(input_reshape, 24)
+                Encoder1 = stack_encoder(self.input_placeholder, 24)
                 Pool1 = unet_res_builder.Pool_layer(Encoder1) #512
 
                 Encoder2 = stack_encoder(Pool1, 64)
@@ -107,52 +101,4 @@ def Build_Unet1024(kwargs):
                 Decode5 = stack_decoder(Decode4, Encoder3, out_filters=128, output_shape=[256, 256], infilter=256)
                 Decode6 = stack_decoder(Decode5, Encoder2, out_filters=64, output_shape=[512,512],  infilter=128)
                 Decode7 = stack_decoder(Decode6, Encoder1, out_filters=24, output_shape=[1024,1024], infilter=64)
-                output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
-                logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
-
-                #Add loss and debug
-                with tf.name_scope('BCE_Loss'):
-                    offset = 1e-5
-                    Threshold = 0.5
-                    Probs = tf.nn.sigmoid(logits)
-                    Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
-                    Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
-                    W_I = (-output_placeholder * tf.log(Probs_processed) - (1-output_placeholder)*tf.log(Con_Probs_processed))
-                    Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I -0.01),0), tf.float32)
-
-                #Dice Loss
-                
-                with tf.name_scope('Dice_Loss'):
-                    eps = tf.constant(value=1e-5, name='eps')
-                    sigmoid = tf.nn.sigmoid(logits,name='sigmoid') + eps
-                    intersection =tf.reduce_sum(sigmoid * output_placeholder,axis=1,name='intersection')
-                    union = eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder,1,name='reduce_mask'))
-                    Dice_loss = 2 * intersection / (union)
-                    Dice_loss = 1 - tf.reduce_mean(Dice_loss, name='diceloss')
-                    unet_res_builder.variable_summaries(sigmoid, name='logits')
-                    Jacard_loss = intersection / (eps + tf.reduce_sum(sigmoid,1,name='reduce_sigmoid') + (tf.reduce_sum(output_placeholder,1,name='reduce_mask')) - intersection)
-                    Jacard_loss = 1- tf.reduce_mean(Jacard_loss, name='jclosss')
-                #Graph Exports
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
-                tf.add_to_collection(kwargs['Model_name'] + '_Weight_ph', weight_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
-                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', Weighted_BCE_loss)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', Dice_loss)
-                #tf.add_to_collection(kwargs['Model_name'] + '_Loss', Jacard_loss)
-
-                if kwargs['Summary']:
-                    unet_res_builder.variable_summaries(sigmoid, name='logits')
-                    #tf.add_to_collection(kwargs['Model_name'] + '_Loss', final_focal_loss)
-                    tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
-                    tf.summary.image('WCBE', tf.reshape(W_I, [-1,kwargs['Image_width'], kwargs['Image_height'], 1]))
-                    #tf.summary.scalar('Count WCBE loss', W_I_count)
-                    #tf.summary.scalar('WCBE losssum ', tf.reduce_sum(W_I))
-                    tf.summary.scalar('Dice loss', Dice_loss)
-                    tf.summary.scalar('JC loss', Jacard_loss)
-                    #tf.summary.scalar('Focal loss', final_focal_loss)
-                return 'Segmentation'
-                return 'Segmentation'
+                self.output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
