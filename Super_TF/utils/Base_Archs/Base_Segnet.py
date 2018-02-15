@@ -77,6 +77,9 @@ class Base_Segnet(Architect):
         D_L = tf.reduce_mean(D_C)
         tf.summary.scalar('Dice_loss', D_L)
         self.loss.append(D_L)
+        tf.summary.image(name='Input image', tensor=self.input_placeholder)
+        tf.summary.image(name='Mask', tensor=self.output_placeholder)
+        tf.summary.image(name='Output', tensor=self.output)
 
     def train(self, **kwargs):
         if kwargs['session'] is None:
