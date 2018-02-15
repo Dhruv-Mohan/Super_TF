@@ -28,6 +28,9 @@ for classnet in classnet_archs:
     #if ".pyc" not in  gan and "__init__" not in  gan and ".py" in  gan:
         #exec("from Model_builder.Architecture.Gan." + gan[:-3] + " import " + gan[:-3] )
 
+for segnet in segnet_archs:
+    if ".pyc" not in segnet and "__init__" not in segnet and ".py" in segnet:
+        exec("from Model_builder.Architecture.Segmentation." + segnet[:-3] + " import " + segnet[:-3] )
 
 class Factory(object):
     """Factory class to build DNN Architectures"""
