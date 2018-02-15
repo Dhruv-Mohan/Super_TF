@@ -1,6 +1,9 @@
 from utils.builder import Builder
 import tensorflow as tf
 
+
+class FRRN_C():
+    pass
 def Build_FRRN_C(kwargs):
         '''
         F-Net, based off FRRN, replaced encode-decode block with Atrous convolutions, reduced network size, enclosed FRRU sequence within pool-upscale block

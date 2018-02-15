@@ -1,6 +1,9 @@
 from utils.builder import Builder
 import tensorflow as tf
 
+
+class Pnet():
+    pass
 def Build_Pnet(kwargs):
         '''Small network to generate prior maps for final segmentation network'''
         with tf.name_scope('Pnet'):

@@ -1,6 +1,9 @@
 from utils.builder import Builder
 import tensorflow as tf
 
+
+class FRRN_A():
+    pass
 def Build_FRRN_A(kwargs):
         with tf.name_scope('FRRN_A'):
             with Builder(**kwargs) as frnn_a_builder:
