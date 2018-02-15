@@ -35,10 +35,11 @@ class Unet1024(Base_Segnet):
                         if infilter is not None:
                             res_filters=infilter
                         #upscale_input = unet_res_builder.Upconv_layer(input, stride=[1, 2, 2, 1], filters=res_filters, Batch_norm=True, output_shape=output_shape) #change_filters to match encoder_connect filters
-                        upscale_input = unet_res_builder.Conv_Resize_layer(input, stride=[1,2,2,1], filters=res_filters, Batch_norm=True)
+                        #upscale_input = unet_res_builder.Conv_Resize_layer(input, stride=[1,2,2,1], filters=res_filters, Batch_norm=True)
+                        upscale_input = unet_res_builder.Conv_Resize_layer(input, k_size=[3,3], output_scale=2, Batch_norm=True, filters=out_filters)
                         uconnect = unet_res_builder.Concat([encoder_connect, upscale_input])
-                        conv1 = unet_res_builder.Conv2d_layer(uconnect, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
-                        conv2 = unet_res_builder.Conv2d_layer(conv1, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
+                        #conv1 = unet_res_builder.Conv2d_layer(uconnect, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
+                        conv2 = unet_res_builder.Conv2d_layer(upscale_input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
                         conv3 = unet_res_builder.Conv2d_layer(conv2, stride=[1, 1, 1, 1], k_size=[3, 3], filters=out_filters, Batch_norm=True)
                         return conv3
 

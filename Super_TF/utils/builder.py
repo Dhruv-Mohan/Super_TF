@@ -15,7 +15,7 @@ class Builder(object):
         self.BNscope = 0
         self.Conv_scope = 0
         self.FC_scope = 0
-        self.Dconv_scope = 0
+        self.DConv_scope = 0
         self.Resize_conv_scope = 0
         self.debug = True
         self.renorm = False

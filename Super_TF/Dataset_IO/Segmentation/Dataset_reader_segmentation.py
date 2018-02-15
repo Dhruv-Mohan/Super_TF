@@ -32,15 +32,13 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
 
             self.image_shape = [self.mean_header_proto.Image_headers.image_width, self.mean_header_proto.Image_headers.image_height, self.mean_header_proto.Image_headers.image_depth]
             self.mask_shape = [self.mean_header_proto.Image_headers.image_width, self.mean_header_proto.Image_headers.image_height, 1]
-            self.images , self.masks , self.mask_weights, self.names = self.batch_inputs()
+            self.images , self.masks , self.names = self.batch_inputs()
 
     def single_read(self):
         features = tf.parse_single_example(self.serialized_example, features=self._Feature_dict)
         image = tf.image.decode_image(features[self._Image_handle])
         mask = tf.image.decode_image(features[self._Image_mask])
-        mask_weight = tf.image.decode_image(features[self._Mask_weights])
         name = features[self._Image_name]
-        mask_weight.set_shape(self.image_shape)
         image.set_shape(self.image_shape)
         mask.set_shape(self.image_shape)
         
@@ -89,7 +87,7 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
         #image = tf.image.random_hue(image, max_delta = 0.01)
         image =tf.image.per_image_standardization(image)
 
-        return image, mask, mask_weight, name
+        return image, mask, name
 
 
     def pre_process_image(self,pre_process_op):
@@ -105,9 +103,9 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
             self.masks = pre_process_op(self.masks)
 
     def batch_inputs(self):
-        image, mask, mask_weight, name = self.single_read()
-        images,masks ,mask_weights, names= tf.train.shuffle_batch([image, mask, mask_weight, name], batch_size=self.batch_size, num_threads=8, capacity=100, min_after_dequeue=90)
-        return images, masks, mask_weights, names
+        image, mask, name = self.single_read()
+        images,masks , names= tf.train.shuffle_batch([image, mask, name], batch_size=self.batch_size, num_threads=8, capacity=100, min_after_dequeue=90)
+        return images, masks, names
         #TODO: CONFIGURABLE PARAMS
 
 
@@ -117,5 +115,5 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
                 self.sess = tf.get_default_session()
             else:
                 self.sess = sess
-            images, masks, mask_weights, names= self.sess.run([self.images, self.masks, self.mask_weights, self.names], feed_dict={self.batch_size : batch_size})
-            return images, masks, mask_weights, names[0].decode()
+            images, masks, names= self.sess.run([self.images, self.masks, self.names], feed_dict={self.batch_size : batch_size})
+            return images, masks,  names[0].decode()
