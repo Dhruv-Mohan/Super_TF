@@ -69,6 +69,8 @@ class Base_Segnet(Architect):
 
     def construct_loss(self):
         #default loss is dice loss
+        if self.output is None:
+            self.set_output()
         eps = tf.constant(1e-5, name='Eps')
         output = tf.nn.sigmoid(self.output + eps)
         intersection = tf.reduce_sum(output*self.output_placeholder, axis=1)

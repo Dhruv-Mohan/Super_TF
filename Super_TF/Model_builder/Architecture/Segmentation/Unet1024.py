@@ -12,7 +12,7 @@ class Unet1024(Base_Segnet):
             with Builder(**self.build_params) as unet_res_builder:
 
                 #Setting control params
-                unet_res_builder.control_params(Dropout_control=self.dropout_placeholder_placeholder, State=self.state_placeholder)
+                unet_res_builder.control_params(Dropout_control=self.dropout_placeholder, State=self.state_placeholder)
 
                 def stack_encoder(input, out_filters):
                     with tf.name_scope('Encoder'):
