@@ -65,6 +65,19 @@ class Pnet(Base_Segnet):
                 output = Pnet_builder.Conv2d_layer(conv5, filters =1, Activation=False, name='Output', Batch_norm=False)
                 #logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
                 return output
+
+    def construct_loss(self):
+        super().construct_loss()
+        Probs = tf.nn.sigmoid(self.output)
+        offset = 1e-5
+        Threshold = 0.1
+        Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
+        Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
+        W_I = (-output_placeholder * tf.log(Probs_processed) - (1-output_placeholder)*tf.log(Con_Probs_processed))
+        Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I -Threshold),0), tf.float32)
+        tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
+        tf.summary.image('WCBE', tf.reshape(W_I, [-1,kwargs['Image_width'], kwargs['Image_height'], 1]))
+        self.loss.append(Weighted_BCE_loss)
             '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
