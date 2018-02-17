@@ -9,9 +9,9 @@ class Pnet(Base_Segnet):
     def build_net(self):
         '''Small network to generate prior maps for final segmentation network'''
         with tf.name_scope('Pnet'):
-            with Builder(**kwargs) as Pnet_builder:
+            with Builder(**self.build_params) as Pnet_builder:
                 #Setting control params
-                Pnet_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                Pnet_builder.control_params(Dropout_control=self.dropout_placeholder, State=self.state_placeholder)
 
 
                 #Stem
@@ -65,7 +65,7 @@ class Pnet(Base_Segnet):
                 output = Pnet_builder.Conv2d_layer(conv5, filters =1, Activation=False, name='Output', Batch_norm=False)
                 #logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
                 return output
-
+    
     def construct_loss(self):
         super().construct_loss()
         Probs = tf.nn.sigmoid(self.output)
@@ -73,12 +73,13 @@ class Pnet(Base_Segnet):
         Threshold = 0.1
         Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
         Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
-        W_I = (-output_placeholder * tf.log(Probs_processed) - (1-output_placeholder)*tf.log(Con_Probs_processed))
+        W_I = (-self.output_placeholder * tf.log(Probs_processed) - (1 - self.output_placeholder)*tf.log(Con_Probs_processed))
         Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I -Threshold),0), tf.float32)
         tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
-        tf.summary.image('WCBE', tf.reshape(W_I, [-1,kwargs['Image_width'], kwargs['Image_height'], 1]))
+        tf.summary.image('WCBE', tf.reshape(W_I, [-1, self.build_params['Image_width'], self.build_params['Image_height'], 1]))
         self.loss.append(Weighted_BCE_loss)
-            '''
+    
+    '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
                     offset = 1e-5
@@ -120,7 +121,7 @@ class Pnet(Base_Segnet):
                     tf.summary.image('WCBE', tf.reshape(W_I, [-1,kwargs['Image_width'], kwargs['Image_height'], 1]))
                     tf.summary.scalar('Dice loss', Dice_loss)
                 return 'Segmentation'
-                '''
+    '''
 
 
 
