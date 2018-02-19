@@ -1,28 +1,21 @@
 from utils.builder import Builder
 import tensorflow as tf
+from utils.Base_Archs.Base_Segnet import Base_Segnet
 
-def Build_Pnet(kwargs):
+class Pnet(Base_Segnet):
+    def __init__(self, kwargs):
+        super().__init__(kwargs)
+        
+    def build_net(self):
         '''Small network to generate prior maps for final segmentation network'''
         with tf.name_scope('Pnet'):
-            with Builder(**kwargs) as Pnet_builder:
-                input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Mask')
-                weight_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Weight')
-                dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = Pnet_builder.Reshape_input(input_placeholder, \
-                    width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
-
-
+            with Builder(**self.build_params) as Pnet_builder:
                 #Setting control params
-                Pnet_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                Pnet_builder.control_params(Dropout_control=self.dropout_placeholder, State=self.state_placeholder)
 
 
                 #Stem
-                conv1 = Pnet_builder.Conv2d_layer(input_reshape, stride=[1, 2, 2, 1], filters=32,Batch_norm=True) #512
+                conv1 = Pnet_builder.Conv2d_layer(self.input_placeholder, stride=[1, 2, 2, 1], filters=32,Batch_norm=True) #512
                 conv3 = Pnet_builder.DConv_layer(conv1, filters=32, Batch_norm=True, D_rate=2)
 
 
@@ -70,9 +63,25 @@ def Build_Pnet(kwargs):
                 unpool = Pnet_builder.Conv_Resize_layer(conv_l)
                 conv5 = Pnet_builder.Conv2d_layer(unpool,  filters=256,Batch_norm=True) #512
                 output = Pnet_builder.Conv2d_layer(conv5, filters =1, Activation=False, name='Output', Batch_norm=False)
-                logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
-
-
+                #logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
+                return output
+    
+    def construct_loss(self):
+        super().construct_loss()
+        output = tf.reshape(self.output, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        output_placeholder = tf.reshape(self.output_placeholder, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        Probs = tf.nn.sigmoid(output)
+        offset = 1e-5
+        Threshold = 0.1
+        Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
+        Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
+        W_I = (-output_placeholder * tf.log(Probs_processed) - (1 - output_placeholder)*tf.log(Con_Probs_processed))
+        Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I -Threshold),0), tf.float32)
+        tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
+        tf.summary.image('WCBE', tf.reshape(W_I, [-1, self.build_params['Image_width'], self.build_params['Image_height'], 1]))
+        self.loss.append(Weighted_BCE_loss)
+    
+    '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
                     offset = 1e-5
@@ -114,6 +123,7 @@ def Build_Pnet(kwargs):
                     tf.summary.image('WCBE', tf.reshape(W_I, [-1,kwargs['Image_width'], kwargs['Image_height'], 1]))
                     tf.summary.scalar('Dice loss', Dice_loss)
                 return 'Segmentation'
+    '''
 
 
 

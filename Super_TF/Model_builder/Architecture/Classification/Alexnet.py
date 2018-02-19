@@ -1,25 +1,24 @@
 from utils.builder import Builder
 import tensorflow as tf
+from utils.Base_Archs.Base_Classifier import Base_Classifier
 
 
+class Alexnet(Base_Classifier):
+    '''Alexnet as defined in https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+    Consists of 5 pooling layer with increasing tensor channels and 3 fully connected layers
+    Conv layer 2, 3 and 5 are followed by a max-pool operation'''
 
-def Build_Alexnet(kwargs):
-        '''Add paper and brief description'''
+    def __init__(self, kwargs):
+        super().__init__(kwargs)
+
+    def build_net(self):
         with tf.name_scope('Alexnet_model'):
-            with Builder(**kwargs) as alexnet_builder:
-                input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
-                dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                state_placeholder = tf.placeholder(tf.bool, name="State")
-
-                input_reshape = alexnet_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
-
+            with Builder(**self.build_params) as alexnet_builder:
                 #Setting control params
-                alexnet_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                alexnet_builder.control_params(Dropout_control=self.dropout_placeholder, State=self.state_placeholder)
 
                 #Feature Extraction
-                conv1 = alexnet_builder.Conv2d_layer(input_reshape, stride=[1, 4, 4, 1], k_size=[11, 11], filters=96, padding='VALID', Batch_norm=True)
+                conv1 = alexnet_builder.Conv2d_layer(self.input_placeholder, stride=[1, 4, 4, 1], k_size=[11, 11], filters=96, padding='VALID', Batch_norm=True)
                 
                 pool1 = alexnet_builder.Pool_layer(conv1, k_size=[1, 3, 3, 1], padding='VALID')
 
@@ -41,21 +40,5 @@ def Build_Alexnet(kwargs):
                 fc2 = alexnet_builder.FC_layer(drop1, filters=4096)
                 drop2 = alexnet_builder.Dropout_layer(fc2)
 
-                output = alexnet_builder.FC_layer(drop2, filters=kwargs['Classes'], readout=True)
-
-                #Logit Loss
-                with tf.name_scope('Cross_entropy_loss'):
-                    softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
-
-                #Adding collections to graph
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
-                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_logit_loss)
-                
-                return 'Classification'
-
-
+                output = alexnet_builder.FC_layer(drop2, filters=self.build_params['Classes'], readout=True)
+                return output

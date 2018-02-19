@@ -1,6 +1,8 @@
 from utils.builder import Builder
 import tensorflow as tf
 
+class Fnet():
+    pass
 def Build_Fnet(kwargs):
         with tf.name_scope('F_Net'):
             with Builder(**kwargs) as frnn_c_builder:

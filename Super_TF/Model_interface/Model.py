@@ -25,12 +25,9 @@ class Model(object):
             learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=True)
         else:
             learning_rate = starter_learning_rate
-        if self.kwargs['Summary']:
-            tf.summary.scalar('Learning_rate', learning_rate)
-        
-        clip_min = - 1.0
-        clip_max = 1.0
-        
+        if self.kwargs['Summary'] is True:
+                tf.summary.scalar('Learning_rate', learning_rate)
+
         #Select Optimizer
         
         if Optimizer is 'ADAM':
@@ -177,6 +174,7 @@ class Model(object):
         if session is None:
             session = tf.get_default_session()
 
+        self.global_step.initializer.run()
         #Try restore
         if restore:
             print('Restoring Default session')
@@ -186,9 +184,10 @@ class Model(object):
         merged = tf.summary.merge_all()
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
-        self.global_step.initializer.run()
+        
 
         for step in range(iterations):
+            print("iter")
             self.NN_arch.train(session=session, data=data, Batch_size=self.kwargs['Batch_size'])
 
             if (step + 1) % save_iterations == 0:
@@ -197,7 +196,6 @@ class Model(object):
                                 global_step=self.global_step)
 
             if (step + 1) % log_iteration == 0:
-                print('Logging')
                 test_out = self.NN_arch.test(session=session, data=data, Batch_size=self.kwargs['Batch_size'], merged=merged)
                 glo_step = session.run([self.global_step])[0]
                 self.log_writer.add_summary(test_out, glo_step)

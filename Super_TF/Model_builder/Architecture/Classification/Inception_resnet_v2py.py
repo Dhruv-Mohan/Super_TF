@@ -1,20 +1,19 @@
 from utils.builder import Builder
 import tensorflow as tf
+from utils.Base_Archs.Base_Classifier import Base_Classifier
 
 
-def Build_Inception_Resnet_v2(kwargs):
-        ''' Inception-resnet-v2 as described in the paper'''
+class Inception_resnet_v2py(Base_Classifier):
+    """Inception-resnet-v2 as described in the https://arxiv.org/abs/1602.07261"""
+    def __init__(self, kwargs):
+        super().__init__(kwargs)
+        self.Endpoints = {}
+
+    def build_net(self):
         with tf.name_scope('Inception_Resnet_v2_model'):
-            with Builder(**kwargs) as inceprv2_builder:
-                input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
-                dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = inceprv2_builder.Reshape_input(input_placeholder, width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
-
+            with Builder(**self.build_params) as inceprv2_builder:
                 #Setting control params
-                inceprv2_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                inceprv2_builder.control_params(Dropout_control=self.dropout_placeholder, State=self.state_placeholder)
                 
                 #Construct functional building blocks
                 def stem(input):
@@ -131,20 +130,21 @@ def Build_Inception_Resnet_v2(kwargs):
                         residual_out = inceprv2_builder.Residual_connect([input, conv2_scale])
                         
                         return residual_out
-                #Model Construction
+                # Model Construction
 
-                #Stem
-                model_stem = stem(input_reshape)
-                #5x Inception Resnet A
+                # Stem
+                model_stem = stem(self.input_placeholder)
+                # 5x Inception Resnet A
                 inception_A1 = inception_resnet_A(model_stem)
                 inception_A2 = inception_resnet_A(inception_A1)
                 inception_A3 = inception_resnet_A(inception_A2)
                 inception_A4 = inception_resnet_A(inception_A3)
                 inception_A5 = inception_resnet_A(inception_A4)
-                #Reduction A
+                self.Endpoints['Block_A'] = inception_A5
+                # Reduction A
                 model_reduction_A = reduction_A(inception_A5)
-                #10X Inception Resnet B
-                inception_B1 = inception_resnet_B(model_reduction_A) #Don't know if i'm missing something or now, but reduction A's output for inception resnetv2 is a tensor of depth 1152
+                # 10X Inception Resnet B
+                inception_B1 = inception_resnet_B(model_reduction_A) # Don't know if i'm missing something or now, but reduction A's output for inception resnetv2 is a tensor of depth 1152
                 inception_B2 = inception_resnet_B(inception_B1)
                 inception_B3 = inception_resnet_B(inception_B2)
                 inception_B4 = inception_resnet_B(inception_B3)
@@ -154,34 +154,22 @@ def Build_Inception_Resnet_v2(kwargs):
                 inception_B8 = inception_resnet_B(inception_B7)
                 inception_B9 = inception_resnet_B(inception_B8)
                 inception_B10 = inception_resnet_B(inception_B9)
-                #Reduction B
+                self.Endpoints['Block_B'] = inception_B10
+                # Reduction B
                 model_reduction_B = reduction_B(inception_B10)
-                #5X Inception Resnet C
+                # 5X Inception Resnet C
                 inception_C1 = inception_resnet_C(model_reduction_B)
                 inception_C2 = inception_resnet_C(inception_C1)
                 inception_C3 = inception_resnet_C(inception_C2)
                 inception_C4 = inception_resnet_C(inception_C3)
                 inception_C5 = inception_resnet_C(inception_C4)
-                #Average Pooling
+                self.Endpoints['Block_C'] = inception_C5
+                # Average Pooling
                 average_pooling = inceprv2_builder.Pool_layer(inception_C5, k_size=[1, 8, 8, 1], stride=[1, 8, 8, 1], padding='SAME', pooling_type='AVG')
-                #Dropout
+                # Dropout
                 drop1 = inceprv2_builder.Dropout_layer(average_pooling)
-                #Output
-                output = inceprv2_builder.FC_layer(drop1, filters=kwargs['Classes'], readout=True)
-                #Logit Loss
-                with tf.name_scope('Cross_entropy_loss'):
-                    softmax_logit_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=output_placeholder, logits=output))
+                # Output
+                output = inceprv2_builder.FC_layer(drop1, filters=self.build_params['Classes'], readout=True)
 
-                #Adding collections to graph
-                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', inception_A5)
-                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', inception_B10)
-                tf.add_to_collection(kwargs['Model_name'] + '_Endpoints', inception_C5)
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
-                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', softmax_logit_loss)
+                return output
 
-                return 'Classification'
