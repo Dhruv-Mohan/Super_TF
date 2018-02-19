@@ -1,25 +1,17 @@
 from utils.builder import Builder
 import tensorflow as tf
+from utils.Base_Archs.Base_Segnet import Base_Segnet
 
+class FRRN_A(Base_Segnet):
+    def __init__(self, kwargs):
+        super().__init__(kwargs)
 
-class FRRN_A():
-    pass
-def Build_FRRN_A(kwargs):
+    def build_net(self):
         with tf.name_scope('FRRN_A'):
-            with Builder(**kwargs) as frnn_a_builder:
-                input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Mask')
-                weight_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Weight')
-                dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = frnn_a_builder.Reshape_input(input_placeholder, \
-                    width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
+            with Builder(**self.build_params) as frnn_a_builder:
 
                 #Setting control params
-                frnn_a_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+                frnn_a_builder.control_params(Dropout_control=self.dropout_placeholder, State=self.state_placeholder)
 
                 #Construct functional building blocks
                 def RU(input, filters):
@@ -52,7 +44,7 @@ def Build_FRRN_A(kwargs):
                     #return Conv2
 
                 #Model Construction
-                Stem = frnn_a_builder.Conv2d_layer(input_reshape, stride=[1, 1, 1, 1], k_size=[5, 5], filters=48, Batch_norm=True)
+                Stem = frnn_a_builder.Conv2d_layer(self.input_placeholder, stride=[1, 1, 1, 1], k_size=[5, 5], filters=48, Batch_norm=True)
                 Stem = RU(Stem, 48)
                 Stem_pool = frnn_a_builder.Pool_layer(Stem)
                 
@@ -120,11 +112,27 @@ def Build_FRRN_A(kwargs):
 
 
                 
-                Upconv = frnn_a_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[kwargs['Image_width'], kwargs['Image_height']])
+                Upconv = frnn_a_builder.Upconv_layer(Conv3, stride=[1, 2, 2, 1], filters=48, Batch_norm=True, output_shape=[self.build_params['Image_width'], self.build_params['Image_height']])
                 Res_connect = frnn_a_builder.Residual_connect([Stem, Upconv])
                 Res_connect = RU(Res_connect, 48)
                 output = frnn_a_builder.Conv2d_layer(Res_connect, filters=1, stride=[1, 1, 1, 1], k_size=[1, 1], Batch_norm=True, Activation=False)
+                return output
 
+    def construct_loss(self):
+        super().construct_loss()
+        output = tf.reshape(self.output, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        output_placeholder = tf.reshape(self.output_placeholder, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        Probs = tf.nn.sigmoid(output)
+        offset = 1e-5
+        Threshold = 0.1
+        Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
+        Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
+        W_I = (-output_placeholder * tf.log(Probs_processed) - (1 - output_placeholder)*tf.log(Con_Probs_processed))
+        Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I -Threshold),0), tf.float32)
+        tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
+        tf.summary.image('WCBE', tf.reshape(W_I, [-1, self.build_params['Image_width'], self.build_params['Image_height'], 1]))
+        self.loss.append(Weighted_BCE_loss)
+    '''
                 #Add loss and debug
                 with tf.name_scope('BCE_Loss'):
                     weights = tf.reshape(weight_placeholder, shape=[-1, kwargs['Image_width']*kwargs['Image_height']])
@@ -192,4 +200,4 @@ def Build_FRRN_A(kwargs):
                     tf.summary.scalar('Focal loss', final_focal_loss)
 
                 return 'Segmentation'
-
+    '''
