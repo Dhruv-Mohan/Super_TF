@@ -43,10 +43,12 @@ class Base_Segnet(Architect):
         self.output = self.build_net()
 
     def set_accuracy_op(self):
-        sigmoid = tf.nn.sigmoid(self.output)
+        output = tf.reshape(self.output, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        output_placeholder = tf.reshape(self.output_placeholder, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        sigmoid = tf.nn.sigmoid(output)
         sigmoid = tf.ceil(sigmoid- 0.5 + 1e-10)
-        intersection = tf.reduce_sum(sigmoid * self.output_placeholder, axis=1) + 1e-10 #per instance 
-        union = tf.reduce_sum(sigmoid, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1) + 1e-10
+        intersection = tf.reduce_sum(sigmoid * output_placeholder, axis=1) + 1e-10 #per instance 
+        union = tf.reduce_sum(sigmoid, axis=1) + tf.reduce_sum(output_placeholder, axis=1) + 1e-10
         self.accuracy = tf.reduce_mean((2*intersection)/union)
         tf.summary.scalar('Dice_Coeff', self.accuracy)
 
@@ -71,17 +73,19 @@ class Base_Segnet(Architect):
         #default loss is dice loss
         if self.output is None:
             self.set_output()
+        output = tf.reshape(self.output, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
         eps = tf.constant(1e-5, name='Eps')
-        output = tf.nn.sigmoid(self.output + eps)
-        intersection = tf.reduce_sum(output*self.output_placeholder, axis=1) + 1e-5
-        union = tf.reduce_sum(output, axis=1) + tf.reduce_sum(self.output_placeholder, axis=1) + 1e-5
+        output = tf.nn.sigmoid(output + eps)
+        output_placeholder = tf.reshape(self.output_placeholder, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        intersection = tf.reduce_sum(output*output_placeholder, axis=1) + 1e-5
+        union = tf.reduce_sum(output, axis=1) + tf.reduce_sum(output_placeholder, axis=1) + 1e-5
         D_C = 1 - (2*intersection) / union
         D_L = tf.reduce_mean(D_C)
         tf.summary.scalar('Dice_loss', D_L)
         self.loss.append(D_L)
         tf.summary.image(name='Input image', tensor=self.input_placeholder)
         tf.summary.image(name='Mask', tensor=self.output_placeholder)
-        tf.summary.image(name='Output', tensor=output)
+        tf.summary.image(name='Output', tensor=tf.nn.sigmoid(self.output))
 
     def train(self, **kwargs):
         if kwargs['session'] is None:
