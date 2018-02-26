@@ -54,7 +54,7 @@ class Dataset_reader_ImageSeqGen(Dataset_reader, Dataset_conifg_ImageSeqGen):
         image = tf.image.random_brightness(image, max_delta = 0.2)
         image = tf.image.random_contrast(image, lower = 0.2, upper = 1.2)
         image = tf.image.random_hue(image, max_delta = 0.1)
-        image = tf.image.rgb_to_grayscale(image)
+        #image = tf.image.rgb_to_grayscale(image)
         image = tf.image.per_image_standardization(image)
         #Alright we've got images, now to get seqs and masks
         complete_seq =  features[self._Seq_handle]
