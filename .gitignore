@@ -299,3 +299,4 @@ __pycache__/
 /Super_TF/Cifar10_test_mean.proto
 /Super_TF/Cifar10_train_mean.proto
 /Super_TF/Gptest.py
+/Super_TF/new_seqgen.py
