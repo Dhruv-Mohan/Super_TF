@@ -9,7 +9,7 @@ class Base_Classifier(Architect):
 
     def __init__(self, kwargs):
         super().__init__()
-        self.input_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'], kwargs['Image_height'],
+        self.input_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_height'], kwargs['Image_width'],
                                                        kwargs['Image_cspace']], name='Input')
         self.output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Classes']], name='Output')
         self.build_params = kwargs

@@ -1,7 +1,11 @@
 from utils.builder import Builder
 import tensorflow as tf
 from tensorflow import nn
-from Model_builder.Architecture.Classification.Inception_resnet_v2a import Build_Inception_Resnet_v2a
+#from Model_builder.Architecture.Classification.Inception_resnet_v2a import Build_Inception_Resnet_v2a
+
+
+class im2txt(object):
+    pass
 
 def Build_Im2txt(kwargs):
         ''' IM2TXT'''

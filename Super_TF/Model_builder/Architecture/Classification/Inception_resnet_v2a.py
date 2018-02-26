@@ -153,12 +153,12 @@ class Inception_resnet_v2a(Base_Classifier):
 
                 #Normal Logits
                 with tf.variable_scope('Logits'):
-                    model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1536, Batch_norm=True) #1536
-                    self.Endpoints['Model_conv'] = model_conv
+                    model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=1024, Batch_norm=True) #1536
                     model_conv_shape = model_conv.get_shape().as_list()
                     model_avg_pool = inceprv2a_builder.Pool_layer(model_conv, k_size=[1, model_conv_shape[1], model_conv_shape[2], 1], stride=[1, model_conv_shape[1], model_conv_shape[2], 1], padding='SAME', pooling_type='AVG')
                     #model_conv = inceprv2a_builder.Conv2d_layer(Block_8, stride=[1, 1, 1, 1], k_size=[1, 1], filters=512, Batch_norm=True) #1536
                     #model_conv = tf.reshape(model_conv, shape=[-1,  model_conv_shape[1] * model_conv_shape[2], model_conv_shape[3]])   #stacking heightwise for attention module
+                    self.Endpoints['Model_conv'] = model_conv
                     drop1 = inceprv2a_builder.Dropout_layer(model_avg_pool)
                     output = inceprv2a_builder.FC_layer(drop1, filters=self.build_params['Classes'], readout=True)
                     return output
