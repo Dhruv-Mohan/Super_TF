@@ -41,7 +41,6 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
         name = features[self._Image_name]
         image.set_shape(self.image_shape)
         mask.set_shape(self.image_shape)
-        
 
         image = tf.image.convert_image_dtype(image, tf.float32)
         mask = tf.squeeze(tf.image.convert_image_dtype(mask, tf.float32))
@@ -110,7 +109,7 @@ class Dataset_reader_segmentation(Dataset_reader, Dataset_config_segmentation):
 
 
     def next_batch(self, batch_size=1, sess=None):
-        with tf.name_scope('Batch_geter') as scope:
+        with tf.name_scope('Batch_getter') as scope:
             if sess is None :
                 self.sess = tf.get_default_session()
             else:
