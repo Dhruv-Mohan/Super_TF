@@ -73,10 +73,30 @@ class Fnet(Base_Segnet):
                     Res_connect = RU(Res_connect, 64)
                     
                 output = frnn_c_builder.Conv2d_layer(Res_connect, filters=1, stride=[1, 1, 1, 1], k_size=[1, 1], Batch_norm=False, Activation=False)
-                logits = tf.reshape(output, shape= [-1, self.build_params['Image_width']*self.build_params['Image_height']])
+                #logits = tf.reshape(output, shape= [-1, self.build_params['Image_width']*self.build_params['Image_height']])
+                return output
 
-                #Add loss and debug
-                '''
+    def construct_loss(self):
+        super().construct_loss()
+        output = tf.reshape(self.output, shape=(
+            -1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        output_placeholder = tf.reshape(self.output_placeholder, shape=(
+                    -1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        Probs = tf.nn.sigmoid(output)
+        offset = 1e-5
+        Threshold = 0.1
+        Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
+        Con_Probs_processed = tf.clip_by_value(1 - Probs, offset, 1.0)
+        W_I = (-output_placeholder * tf.log(Probs_processed) - (1 - output_placeholder) * tf.log(
+            Con_Probs_processed))
+        Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I - Threshold), 0),
+            tf.float32)
+        tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
+        tf.summary.image('WCBE', tf.reshape(W_I, [-1, self.build_params['Image_width'],
+            self.build_params['Image_height'], 1]))
+        self.loss.append(Weighted_BCE_loss)
+        #Add loss and debug
+        '''
                 with tf.name_scope('Focal_Loss'):
                     
                     P = tf.minimum(tf.nn.sigmoid(logits)+1e-4,1.0) #safe for log sigmoid
@@ -91,8 +111,8 @@ class Fnet(Base_Segnet):
                     #final_focal_loss = tf.reduce_mean(focal_loss)
                     #eps = tf.constant(value=1e-5)
                     #sigmoid = tf.nn.sigmoid(logits) + eps
-                '''
-                '''
+        '''
+        '''
                 
                 with tf.name_scope('BCE_Loss'):
                     offset = 1e-5
@@ -134,7 +154,7 @@ class Fnet(Base_Segnet):
                     #tf.summary.scalar('Dice loss', Dice_loss)
                     #tf.summary.scalar('Focal loss', final_focal_loss)
                 return 'Segmentation'
-                '''
+        '''
 
 
 
