@@ -2,33 +2,21 @@ from utils.builder import Builder
 import tensorflow as tf
 from utils.Base_Archs.Base_Segnet import Base_Segnet 
 
-class Fnet():
-    pass
-def Build_Fnet(kwargs):
-        with tf.name_scope('F_Net'):
-            with Builder(**kwargs) as frnn_c_builder:
-                frnn_c_builder.BNscope=50
-                input_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']*kwargs['Image_cspace']], name='Input')
-                output_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Mask')
-                weight_placeholder = tf.placeholder(tf.float32, \
-                    shape=[None, kwargs['Image_width']*kwargs['Image_height']], name='Weight')
-                dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dropout')
-                state_placeholder = tf.placeholder(tf.string, name="State")
-                input_reshape = frnn_c_builder.Reshape_input(input_placeholder, \
-                    width=kwargs['Image_width'], height=kwargs['Image_height'], colorspace= kwargs['Image_cspace'])
-                #Build P-Net output + Input
-                prior_image_path = tf.placeholder(tf.string)
-                prior_image = tf.image.decode_image(tf.read_file(prior_image_path)) 
-                prior_image.set_shape([900, 900, 1])
-                prior_image =  tf.image.convert_image_dtype( tf.image.resize_images(prior_image, size=[kwargs['Image_height'],kwargs['Image_width']]), tf.float32) 
-                prior_image = tf.stack([prior_image,prior_image,prior_image], axis=2)
-                prior_image= tf.multiply(prior_image,0.0001)
-                prior_image=tf.expand_dims(tf.squeeze( prior_image),0)
-                input_reshape = input_reshape+prior_image
+class Fnet(Base_Segnet):
 
-                frnn_c_builder.control_params(Dropout_control=dropout_prob_placeholder, State=state_placeholder)
+    def __init__(self, kwargs):
+        super().__init__(kwargs)
+        self.input_append_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'], kwargs['Image_height'],
+                                                       kwargs['Image_cspace']], name='Input')
+
+    def construct_IO_dict(self, batch):
+        return {self.input_placeholder: batch[0], self.output_placeholder: batch[1], self.input_append_placeholder: batch[2]} #Fix batch indexing
+
+    def build_net(self):
+        with tf.name_scope('F_Net'):
+            with Builder(**self.build_params) as frnn_c_builder:
+
+                frnn_c_builder.control_params(Dropout_control=self.dropout_placeholder, State=self.state_placeholder)
 
                 #Construct functional building blocks
                 def RU(input, filters):
@@ -58,7 +46,8 @@ def Build_Fnet(kwargs):
 
                 #Model Construction
                 with tf.name_scope('F-Net'):
-                    Stem = frnn_c_builder.Conv2d_layer(input_reshape, stride=[1, 1, 1, 1], k_size=[3, 3], filters=64, Batch_norm=True)
+                    input = tf.concat([self.input_placeholder, self.input_placeholder])
+                    Stem = frnn_c_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=64, Batch_norm=True)
                     Stem = RU(Stem, 64)
                     
                     Residual_stream = frnn_c_builder.Conv2d_layer(Stem, stride=[1, 1, 1, 1], k_size=[1, 1], filters=32, Batch_norm=True)
@@ -84,8 +73,7 @@ def Build_Fnet(kwargs):
                     Res_connect = RU(Res_connect, 64)
                     
                 output = frnn_c_builder.Conv2d_layer(Res_connect, filters=1, stride=[1, 1, 1, 1], k_size=[1, 1], Batch_norm=False, Activation=False)
-                weights = tf.reshape(weight_placeholder, shape=[-1, kwargs['Image_width']*kwargs['Image_height']])
-                logits = tf.reshape(output, shape= [-1, kwargs['Image_width']*kwargs['Image_height']])
+                logits = tf.reshape(output, shape= [-1, self.build_params['Image_width']*self.build_params['Image_height']])
 
                 #Add loss and debug
                 '''
@@ -103,6 +91,7 @@ def Build_Fnet(kwargs):
                     #final_focal_loss = tf.reduce_mean(focal_loss)
                     #eps = tf.constant(value=1e-5)
                     #sigmoid = tf.nn.sigmoid(logits) + eps
+                '''
                 '''
                 
                 with tf.name_scope('BCE_Loss'):
@@ -130,18 +119,6 @@ def Build_Fnet(kwargs):
                     Dice_loss = 1 - tf.reduce_mean(Dice_loss,name='diceloss')
                     
                 
-                #Graph Exports
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_ph', input_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Input_reshape', input_reshape)
-                tf.add_to_collection(kwargs['Model_name'] + '_Weight_ph', weight_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output_ph', output_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Output', output)
-                tf.add_to_collection(kwargs['Model_name'] + '_Dropout_prob_ph', dropout_prob_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_State', state_placeholder)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', Weighted_BCE_loss)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', Dice_loss)
-                tf.add_to_collection(kwargs['Model_name'] + '_Loss', EU_loss)
-                tf.add_to_collection(kwargs['Model_name'] +'_Prior_path', prior_image_path)
 
                 
                 #Graph Summaries
@@ -157,6 +134,7 @@ def Build_Fnet(kwargs):
                     #tf.summary.scalar('Dice loss', Dice_loss)
                     #tf.summary.scalar('Focal loss', final_focal_loss)
                 return 'Segmentation'
+                '''
 
 
 
