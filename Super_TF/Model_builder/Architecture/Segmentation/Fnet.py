@@ -1,5 +1,6 @@
 from utils.builder import Builder
 import tensorflow as tf
+from utils.Base_Archs.Base_Segnet import Base_Segnet 
 
 class Fnet():
     pass
