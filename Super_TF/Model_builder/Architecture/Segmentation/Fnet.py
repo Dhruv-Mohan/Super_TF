@@ -7,7 +7,7 @@ class Fnet(Base_Segnet):
     def __init__(self, kwargs):
         super().__init__(kwargs)
         self.input_append_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'], kwargs['Image_height'],
-                                                       kwargs['Image_cspace']], name='Input')
+                                                       1], name='Input')
 
     def construct_IO_dict(self, batch):
         return {self.input_placeholder: batch[0], self.output_placeholder: batch[1], self.input_append_placeholder: batch[2]} #Fix batch indexing
@@ -46,7 +46,7 @@ class Fnet(Base_Segnet):
 
                 #Model Construction
                 with tf.name_scope('F-Net'):
-                    input = tf.concat([self.input_placeholder, self.input_placeholder])
+                    input = tf.concat([self.input_placeholder, self.input_append_placeholder], axis=3)
                     Stem = frnn_c_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=64, Batch_norm=True)
                     Stem = RU(Stem, 64)
                     
@@ -95,6 +95,7 @@ class Fnet(Base_Segnet):
         tf.summary.image('WCBE', tf.reshape(W_I, [-1, self.build_params['Image_width'],
             self.build_params['Image_height'], 1]))
         self.loss.append(Weighted_BCE_loss)
+        tf.summary.image(name='Denseimage', tensor=self.input_append_placeholder)
         #Add loss and debug
         '''
                 with tf.name_scope('Focal_Loss'):
