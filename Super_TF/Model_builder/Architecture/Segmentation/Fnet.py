@@ -47,6 +47,7 @@ class Fnet(Base_Segnet):
                 #Model Construction
                 with tf.name_scope('F-Net'):
                     input = tf.concat([self.input_placeholder, self.input_append_placeholder], axis=3)
+                    #input = self.input_placeholder
                     Stem = frnn_c_builder.Conv2d_layer(input, stride=[1, 1, 1, 1], k_size=[3, 3], filters=64, Batch_norm=True)
                     Stem = RU(Stem, 64)
                     

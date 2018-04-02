@@ -185,7 +185,7 @@ class Model(object):
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         
-        
+        data = data.next_batch(1)
         for step in range(iterations):
             print("iter")
             self.NN_arch.train(session=session, data=data, Batch_size=self.kwargs['Batch_size'])

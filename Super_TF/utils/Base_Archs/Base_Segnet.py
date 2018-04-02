@@ -92,8 +92,8 @@ class Base_Segnet(Architect):
             session = tf.get_default_session()
         else:
             session = kwargs['session']
-
-        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        batch = kwargs['data']
+        #batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
         IO_feed_dict = self.construct_IO_dict(batch)
         train_dict = self.construct_control_dict(Type='Train')
         train_feed_dict = {**IO_feed_dict, **train_dict}
@@ -104,8 +104,8 @@ class Base_Segnet(Architect):
             session = tf.get_default_session()
         else:
             session = kwargs['session']
-
-        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        batch = kwargs['data']
+        #batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
         IO_feed_dict = self.construct_IO_dict(batch)
         test_dict = self.construct_control_dict(Type='Test')
         test_feed_dict = {**IO_feed_dict, **test_dict}
