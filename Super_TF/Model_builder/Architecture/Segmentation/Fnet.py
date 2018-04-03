@@ -88,13 +88,12 @@ class Fnet(Base_Segnet):
         Threshold = 0.1
         Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
         Con_Probs_processed = tf.clip_by_value(1 - Probs, offset, 1.0)
-        W_I = (-output_placeholder * tf.log(Probs_processed) - (1 - output_placeholder) * tf.log(
-            Con_Probs_processed))
+        W_I = (-output_placeholder * tf.log(Probs_processed) - (1 - output_placeholder) * tf.log(Con_Probs_processed))
         Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I - Threshold), 0),
-            tf.float32)
+                                                         tf.float32)
         tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
         tf.summary.image('WCBE', tf.reshape(W_I, [-1, self.build_params['Image_width'],
-            self.build_params['Image_height'], 1]))
+                                                  self.build_params['Image_height'], 1]))
         self.loss.append(Weighted_BCE_loss)
         tf.summary.image(name='Denseimage', tensor=self.input_append_placeholder)
         #Add loss and debug

@@ -7,8 +7,8 @@ import random
 class Stargan(Base_Gan):
     def __init__(self, kwargs):
         super().__init__(kwargs)
-        self.gen_class_placeholder = tf.placeholder(tf.float32, shape=[None, 1, 1, self.build_params['Classes']], name='Gen_class')
-        self.dis_class_placeholder = tf.placeholder(tf.float32, shape=[None, 1, 1, self.build_params['Classes']], name='Dis_class')
+        self.gen_class_placeholder = tf.placeholder(tf.float32, shape=[None, self.build_params['Classes']], name='Gen_class')
+        self.dis_class_placeholder = tf.placeholder(tf.float32, shape=[None, self.build_params['Classes']], name='Dis_class')
 
         self.gen_name = 'Stargan_generator'
         self.dis_name = 'Stargan_discriminator'
@@ -87,8 +87,15 @@ class Stargan(Base_Gan):
                     Dis_conv6 = stardis_builder.Conv2d_layer(Dis_conv5, k_size=[4, 4], stride=[1, 2, 2, 1], filters=2048, padding=[[0, 0], [1, 1], [1, 1], [0, 0]], Activation=False)
                     Dis_conv6 = stardis_builder.Activation(Dis_conv6, Type='LRELU')
 
-                    Output_Dsrc = stardis_builder.Conv2d_layer(Dis_conv6, k_size=[3, 3], stride=[1, 1, 1, 1], filters=1, Activation=False)
-                    Output_Dcls = stardis_builder.Conv2d_layer(Dis_conv6, k_size=[ int(self.build_params['Image_height']/64), int(self.build_params['Image_width']/64)], Activation=False, padding='VALID')
+                    Output_Dsrc = stardis_builder.Conv2d_layer(Dis_conv6, k_size=[3, 3], stride=[1, 1, 1, 1], filters=1,
+                                                               Activation=False)
+                    Output_Dcls = stardis_builder.Conv2d_layer(Dis_conv6,
+                                                               k_size=[int(self.build_params['Image_height']/64),
+                                                                       int(self.build_params['Image_width']/64)],
+                                                               filters=self.build_params['Classes'],
+                                                               Activation=False,
+                                                               padding='VALID')
+                    Output_Dcls = tf.squeeze(Output_Dcls)
                     return (Output_Dsrc, Output_Dcls)
 
     def set_accuracy_op(self):
@@ -143,16 +150,16 @@ class Stargan(Base_Gan):
                                                 global_step=None)
         self.gen_loss_op = optimizer.minimize(loss=self.Gen_loss, var_list=gen_train_vars, global_step=None)
 
-    def gen_random_lab(self, real_lab):
+    def gen_random_lab(self,):
         cls_idx = random.randrange(self.build_params['Classes'])
         one_hot_vec = tf.one_hot(cls_idx, self.build_params['Classes'])
         for i in range(3):
             one_hot_vec = tf.expand_dims(one_hot_vec, 0)
         return one_hot_vec
 
-    def construct_IO_dict(self, batch): # need to write predict io dict too
-        return  {self.gen_input_placeholder: batch[0], self.dis_class_placeholder: batch[1], self.gen_class_placeholder:
-            self.gen_random_lab(batch[1])}
+    def construct_IO_dict(self, batch):  # need to write predict io dict too
+        return {self.gen_input_placeholder: batch[0], self.dis_class_placeholder: batch[1],
+                self.gen_class_placeholder: self.gen_random_lab()}
 
     def train(self, kwargs):
         if kwargs['session'] is None:
