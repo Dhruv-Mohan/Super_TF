@@ -130,6 +130,14 @@ class Stargan(Base_Gan):
             Gen_loss_rec = tf.reduce_mean(tf.abs(reconst_gen_out - self.fake_gen_out))
             self.Gen_loss = Gen_loss_rec - Dis_loss_fake + Gen_loss_cls
 
+            tf.summary.scalar('Dis_loss_stage1', self.Dis_stage1_loss)
+            tf.summary.scalar('Dis_loss_stage2', self.Dis_stage2_loss)
+            tf.summary.scalar('Gen_loss', self.Gen_loss)
+            tf.summary.image('Generator_reconst', reconst_gen_out)
+            tf.summary.image('Generator_fake_out', self.fake_gen_out)
+            tf.summary.scalar('Gen_loss_cls', Gen_loss_cls)
+            tf.summary.scalar('Dis_loss_cls', Dis_loss_cls)
+
     def predict(self, kwargs):
         if kwargs['session'] is None:
             session = tf.get_default_session()
