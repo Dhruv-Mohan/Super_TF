@@ -19,7 +19,7 @@ class Base_Segnet(Architect):
 
         self.build_params = kwargs
         self.dropout_placeholder = tf.placeholder(tf.float32, name='Dropout')
-        self.state_placeholder = tf.placeholder(tf.string, name='State')
+        self.state_placeholder = tf.placeholder(tf.bool, name='State')
         self.output = None
 
         self.loss = []
@@ -34,10 +34,10 @@ class Base_Segnet(Architect):
 
     def construct_control_dict(self, Type='TEST'):
         if Type.upper() in 'TRAIN':
-            return {self.dropout_placeholder: self.build_params['Dropout'], self.state_placeholder: self.build_params['State']}
+            return {self.dropout_placeholder: self.build_params['Dropout'], self.state_placeholder: True}
 
         elif Type.upper() in 'TEST':
-            return {self.dropout_placeholder: 1, self.state_placeholder: self.build_params['State']}
+            return {self.dropout_placeholder: 1, self.state_placeholder: False }
 
     def set_output(self):
         self.output = self.build_net()
@@ -54,19 +54,18 @@ class Base_Segnet(Architect):
 
     def set_train_ops(self, optimizer):
         loss = tf.add_n(self.loss, 'Loss_accu')
+        #update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+        #with tf.control_dependencies(update_ops):
         self.train_step = optimizer.minimize(loss, global_step=self.global_step)
 
     def construct_IO_dict(self, batch):
         return {self.input_placeholder: batch[0], self.output_placeholder: batch[1]} #Input image and output image
 
     def predict(self, **kwargs):
-        if kwargs['session'] is None:
-            session = tf.get_default_session()
-        else:
-            session = kwargs['session']
-
+        session = kwargs['session']
+        test_dict = self.construct_control_dict(Type='Test')
         predict_io_dict = {self.input_placeholder: kwargs['Input_Im']}
-        predict_feed_dict = {**predict_io_dict, **self.test_dict}
+        predict_feed_dict = {**predict_io_dict, **test_dict}
         return session.run([self.output], feed_dict=predict_feed_dict)
 
     def construct_loss(self):
@@ -82,7 +81,7 @@ class Base_Segnet(Architect):
         D_C = 1 - (2*intersection) / union
         D_L = tf.reduce_mean(D_C)
         tf.summary.scalar('Dice_loss', D_L)
-        self.loss.append(D_L)
+        self.loss.append(D_L*50)
         tf.summary.image(name='Input image', tensor=self.input_placeholder)
         tf.summary.image(name='Mask', tensor=self.output_placeholder)
         tf.summary.image(name='Output', tensor=tf.nn.sigmoid(self.output))
@@ -92,22 +91,22 @@ class Base_Segnet(Architect):
             session = tf.get_default_session()
         else:
             session = kwargs['session']
-        batch = kwargs['data']
-        #batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        #batch = kwargs['data']
+        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
         IO_feed_dict = self.construct_IO_dict(batch)
-        train_dict = self.construct_control_dict(Type='Train')
+        train_dict = self.construct_control_dict(Type='TRAIN')
         train_feed_dict = {**IO_feed_dict, **train_dict}
-        session.run([self.train_step], feed_dict=train_feed_dict)
+        session.run([self.train_step, self.update_ops], feed_dict=train_feed_dict)
 
     def test(self, **kwargs):
         if kwargs['session'] is None:
             session = tf.get_default_session()
         else:
             session = kwargs['session']
-        batch = kwargs['data']
-        #batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        #batch = kwargs['data']
+        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
         IO_feed_dict = self.construct_IO_dict(batch)
-        test_dict = self.construct_control_dict(Type='Test')
+        test_dict = self.construct_control_dict(Type='TEST')
         test_feed_dict = {**IO_feed_dict, **test_dict}
 
         if self.accuracy is not None:

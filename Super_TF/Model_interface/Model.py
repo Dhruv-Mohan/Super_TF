@@ -84,6 +84,9 @@ class Model(object):
         
         self.train_step = self.optimizer.apply_gradients(zip(gradients,tvars), global_step=self.global_step)
         """
+    def Place_arch(self):
+        if self.NN_arch.output is None:
+            self.NN_arch.set_output()
 
     def Construct_Model(self):
         return Factory(**self.kwargs).get_model()
@@ -166,8 +169,8 @@ class Model(object):
         else:
             print('Ckpt_not_found')
 
-    def Predict(self, kwargs):
-        return self.NN_arch.predict(kwargs)
+    def Predict(self, **kwargs):
+        return self.NN_arch.predict(**kwargs)
 
     def Train_Iter(self, iterations, save_iterations=100, data=None, log_iteration=2, restore=True, session=None, micro_batch=2):
         #Get default session
@@ -185,7 +188,7 @@ class Model(object):
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
         
-        data = data.next_batch(1)
+        #data = data.next_batch(1)
         for step in range(iterations):
             print("iter")
             self.NN_arch.train(session=session, data=data, Batch_size=self.kwargs['Batch_size'])
@@ -246,8 +249,8 @@ class Model(object):
                 self.log_writer.add_summary(summary, glo_step)
 
         """
-        coord.request_stop()
-        coord.join(threads)
+        #coord.request_stop()
+        #coord.join(threads)
 
 
 

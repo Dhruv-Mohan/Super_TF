@@ -7,6 +7,9 @@ class Dataset_writer(object):
     def _int64_feature(value):
         return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
+    @staticmethod
+    def _float_feature(value):
+        return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
 
     @staticmethod
     def _bytes_feature(value):

@@ -18,7 +18,7 @@ class Builder(object):
         self.DConv_scope = 0
         self.Resize_conv_scope = 0
         self.debug = True
-        self.renorm = False
+        self.renorm = True
         self.share_vars = False
         self.renorm_dict = None
         if kwargs['State'] in 'Train':
@@ -32,18 +32,18 @@ class Builder(object):
     def __exit__(self, exc_type, exc_value, traceback):
         print('Building complete')
 
-    def control_params(self, Dropout_control=None, State=None, Renorm=False, Share_var = True, Rmax=3, Dmax=5, R_Iter=200*5*50, D_Iter=550*5*50):
+    def control_params(self, Dropout_control=None, State=None, Renorm=None, Share_var = True, Rmax=3, Dmax=5, R_Iter=200*5*50, D_Iter=550*5*50):
         self.Dropout_control = Dropout_control
         self.State = State
-        self.renorm=Renorm
+        self.renorm=False
         self.share_vars = Share_var
         if self.renorm:
             self.construct_renorm_dict(Rmax=Rmax, Dmax=Dmax, R_Iter=R_Iter, D_Iter=D_Iter)
 
     def construct_renorm_dict(self, Rmax, Dmax, R_Iter, D_Iter):
-            rmax = tf.Variable(1.0, trainable=False, name='Rmax', dtype=tf.float32)
-            rmin = tf.Variable(0.99, trainable=False, name='Rmin', dtype=tf.float32)
-            dmax = tf.Variable(0.0, trainable=False, name='Dmax', dtype=tf.float32)
+            rmax = tf.get_variable(initializer=tf.constant_initializer(1.0), shape= [], trainable=False, name='Rmax', dtype=tf.float32)
+            rmin = tf.get_variable(initializer=tf.constant_initializer(0.99), shape= [], trainable=False, name='Rmin', dtype=tf.float32)
+            dmax = tf.get_variable(initializer= tf.constant_initializer(0.0), shape= [], trainable=False, name='Dmax', dtype=tf.float32)
             update_rmax = tf.cond(self.global_step<R_Iter, self.assign_add(rmax, 1, Rmax, R_Iter), self.make_noop).op
             update_dmax = tf.cond(self.global_step<D_Iter, self.assign_add(dmax, 0, Dmax, D_Iter), self.make_noop).op
             update_rmin = tf.cond(self.global_step<R_Iter, self.assign_inv(rmin, rmax), self.make_noop).op
@@ -124,11 +124,12 @@ class Builder(object):
             else:
                 final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name=name) + bias
 
-            if Activation: #Prepare for Resnet
-                final_conv = self.Relu(final_conv)
-
             if Batch_norm:
                 final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
+
+
+            if Activation: #Prepare for Resnet
+                final_conv = self.Relu(final_conv)
 
             return final_conv
 
@@ -162,11 +163,12 @@ class Builder(object):
             final_shape = tf.stack([batch_size, output_shape[0], output_shape[1], int(filters)])
             final_deconv = tf.nn.conv2d_transpose(input, weights, output_shape=final_shape, strides=stride, padding=padding)
             final_deconv = tf.reshape(final_deconv,[-1, output_shape[0], output_shape[1], int(filters)])
+            if Batch_norm:
+                final_deconv = self.Batch_norm(final_deconv, batch_type=batch_type)
             if Activation:
                 final_deconv = self.Relu(final_deconv)
 
-            if Batch_norm:
-                final_deconv = self.Batch_norm(final_deconv, batch_type=batch_type)
+
 
             return final_deconv
 
@@ -251,7 +253,7 @@ class Builder(object):
             weight = self.Weight_variable([input.get_shape().as_list()[1], int(filters)], weight_decay)
 
             proto_output = tf.matmul(input, weight) + bias;
-
+            #proto_output = self.Batch_norm(proto_output, batch_type=None)
             if readout:
                 return(proto_output)
 
@@ -274,7 +276,7 @@ class Builder(object):
             keep_prob=self.Dropout_control
         return(tf.nn.dropout(input, keep_prob=keep_prob, seed=seed, name="Dropout"))
 
-
+    '''
     def _BN_TRAIN(self, input, pop_mean, pop_var, scale, beta, epsilon, decay):
         with tf.name_scope('BN_TRAIN') as scope:
             batch_mean, batch_var = tf.nn.moments(input, [0, 1, 2])
@@ -313,7 +315,7 @@ class Builder(object):
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_pop_avg)
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, update_pop_var)
         return output
-    
+
     def BatchNorm_layer(self, x, scope, train, epsilon=0.001, decay=.99):
         # Perform a batch normalization after a conv layer or a fc layer
         # gamma: a scale factor
@@ -345,13 +347,12 @@ class Builder(object):
                  moving_avg = tf.get_variable("moving_avg", shape[-1], initializer=tf.constant_initializer(0.0), trainable=False)
                  moving_var = tf.get_variable("moving_var", shape[-1], initializer=tf.constant_initializer(1.0), trainable=False)
                  bnscope.reuse_variables()
-
-    def Batch_norm(self, input, *, batch_type, decay=0.92, epsilon=0.001, scope=None):
-        
-        if self.renorm is not None:
-            output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=self.train, renorm=True, renorm_clipping=self.renorm_dict)
-            return output
-        else:
+    '''
+    def Batch_norm(self, input, *, batch_type, decay=0.9, epsilon=0.001, scope=None):
+        output = tf.keras.layers.BatchNormalization(scale=False, momentum=0.99)(input, training=self.State)
+        #output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=self.State, renorm=self.renorm, trainable=True, renorm_clipping=self.renorm_dict, reuse=False, fused=True)
+        return output
+    '''
             shape = input.get_shape().as_list()
             self.initialize_batch_norm(shape)
             with tf.variable_scope("BATCHNM_" + str(self.BNscope), reuse=True) as bnscope:
@@ -377,7 +378,7 @@ class Builder(object):
                     else:
                         output = tf.nn.batch_normalization(input, moving_avg, moving_var, offset=beta, scale=gamma, variance_epsilon=epsilon)
                         return output
-
+    '''
     def Concat(self, inputs, axis=3):
         with tf.name_scope('Concat') as scope:
             return tf.concat(inputs, axis=axis)
