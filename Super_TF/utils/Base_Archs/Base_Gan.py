@@ -12,7 +12,7 @@ class Base_Gan(Architect):
             shape=[None, kwargs['Image_width'], kwargs['Image_height'], kwargs['Image_cspace']], name='Input')
         self.build_params = kwargs
         self.gen_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Gen_Dropout')
-        self.gan_state_placeholder = tf.placeholder(tf.string, name="State")
+        self.gan_state_placeholder = tf.placeholder(tf.bool, name="State")
         self.dis_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Dis_Dropout')
 
     @abstractmethod
@@ -24,15 +24,15 @@ class Base_Gan(Architect):
         pass
 
     def construct_control_dict(self, Type='TEST'):
-        if Type.upper() is 'TRAIN':
+        if Type.upper() in 'TRAIN':
             return {self.gen_dropout_prob_placeholder: self.build_params['Gen_Dropout'],\
                 self.dis_dropout_prob_placeholder: self.build_params['Dis_Dropout'],\
-                self.gan_state_placeholder: self.build_params['State']}
+                self.gan_state_placeholder: True}
 
-        elif Type.upper() is 'TEST':
+        elif Type.upper() in 'TEST':
             return {self.gen_dropout_prob_placeholder: 1,\
                 self.dis_dropout_prob_placeholder: 1,\
-                self.gan_state_placeholder: self.build_params['State']}
-
-    def construct_IO_dict(self):
+                self.gan_state_placeholder: False}
+    
+    def Construct_IO_dict(self):
         pass

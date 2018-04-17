@@ -2,7 +2,7 @@ from utils.builder import Builder
 import tensorflow as tf
 from utils.Base_Archs.Base_Gan import Base_Gan
 import random
-
+import numpy as np
 
 class Stargan(Base_Gan):
     def __init__(self, kwargs):
@@ -30,7 +30,7 @@ class Stargan(Base_Gan):
         self.fake_gen_out = None
 
         # Alpha ops
-        self.alpha = tf.get_variable("Alpha", random.random(), trainable=False)
+        self.alpha = tf.random_uniform([], 0, 1)
 
         # Hyper_params
         self.dis_cycles = 10
@@ -117,8 +117,10 @@ class Stargan(Base_Gan):
             self.Dis_stage1_loss = Dis_loss_cls + Dis_loss_fake + Dis_loss_real
 
             # Dis loss stage2
-            with tf.control_dependencies(self.alpha.initializer.run()):
-                interp = tf.scalar_mul(self.alpha, self.gen_input_placeholder) + tf.scalar_mul(1-self.alpha, self.fake_gen_out)
+            #with tf.control_dependencies(self.alpha.initializer.run()):
+            print(self.alpha.shape)
+            print(self.fake_gen_out.shape)
+            interp = tf.scalar_mul(self.alpha, self.gen_input_placeholder) + tf.scalar_mul(1-self.alpha, self.fake_gen_out)
 
             Dis_loss_intrp, _ = self.discriminator(interp)
             grads = tf.gradients(Dis_loss_intrp, interp)
@@ -158,18 +160,17 @@ class Stargan(Base_Gan):
                                                 global_step=None)
         self.gen_loss_op = optimizer.minimize(loss=self.Gen_loss, var_list=gen_train_vars, global_step=None)
 
-    def gen_random_lab(self,):
-        cls_idx = random.randrange(self.build_params['Classes'])
-        one_hot_vec = tf.one_hot(cls_idx, self.build_params['Classes'])
-        for i in range(3):
-            one_hot_vec = tf.expand_dims(one_hot_vec, 0)
+    def gen_random_lab(self):
+        cls_idx = np.array([random.randrange(self.build_params['Classes'])])
+        one_hot_vec = np.zeros((self.build_params['Batch_size'], self.build_params['Classes']))
+        one_hot_vec[np.arange(self.build_params['Batch_size']), cls_idx] = 1
         return one_hot_vec
 
-    def construct_IO_dict(self, batch):  # need to write predict io dict too
+    def Construct_IO_dict(self, batch):  # need to write predict io dict too
         return {self.gen_input_placeholder: batch[0], self.dis_class_placeholder: batch[1],
                 self.gen_class_placeholder: self.gen_random_lab()}
 
-    def train(self, kwargs):
+    def train(self, **kwargs):
         if kwargs['session'] is None:
             session = tf.get_default_session()
         else:
@@ -189,7 +190,7 @@ class Stargan(Base_Gan):
         #Gen
         session.run([self.gen_loss_op], feed_dict=train_feed_dict)
 
-    def test(self, kwargs):
+    def test(self, **kwargs):
         if kwargs['session'] is None:
             session = tf.get_default_session()
         else:
@@ -199,5 +200,5 @@ class Stargan(Base_Gan):
         IO_feed_dict = self.Construct_IO_dict(batch)
         test_feed_dict = {**IO_feed_dict, **self.test_dict}
 
-        return session.run([kwargs['Merged'], self.global_step], \
-            feed_dict=test_feed_dict)
+        return session.run([kwargs['merged']], \
+            feed_dict=test_feed_dict)[0]

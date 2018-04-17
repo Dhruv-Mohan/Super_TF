@@ -36,6 +36,11 @@ for sequnet in seqnet_archs:
     if ".pyc" not in sequnet and "__init__" not in sequnet and ".py" in sequnet:
         exec("from Model_builder.Architecture.Sequencegen." + sequnet[:-3] + " import " + sequnet[:-3] )
 
+for gannet in gan_archs:
+    if ".pyc" not in gannet and "__init__" not in gannet and ".py" in gannet:
+        exec("from Model_builder.Architecture.Gan." + gannet[:-3] + " import " + gannet[:-3] )
+
+
 class Factory(object):
     """Factory class to build DNN Architectures"""
     #Look into adding a datastructure to keep track of last layer added to the graph
