@@ -42,7 +42,7 @@ class Dataset_reader_classification(Dataset_reader,Dataset_conifg_classification
         image = tf.image.decode_image(features[self._Image_handle])
         image.set_shape(self.image_shape)
         image = tf.image.convert_image_dtype(image, tf.float32)
-        image = image - self.mean_image
+        #image = image - self.mean_image
         return image , features[self._Label_handle]
 
 

@@ -19,7 +19,7 @@ class Builder(object):
         self.Resize_conv_scope = 0
         self.debug = True
         self.renorm = True
-        self.share_vars = False
+        self.share_vars = True
         self.renorm_dict = None
         if kwargs['State'] in 'Train':
             self.train = True
@@ -61,9 +61,10 @@ class Builder(object):
     def Weight_variable(self, shape, weight_decay=0.000004):
         with tf.variable_scope('Weight') as scope:
             #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
-            #initi = tf.contrib.layers.xavier_initializer()
+            initi = tf.contrib.layers.xavier_initializer()
             #initi = tf.orthogonal_initializer()
-            initi = tf.random_uniform_initializer(minval=-0.08, maxval=0.08)
+            #initi = tf.random_uniform_initializer(minval=-0.08, maxval=0.08)
+            #initi =tf.truncated_normal_initializer(0.02)
             if self.share_vars:
                 weights = tf.get_variable('weights', shape=shape, initializer=initi)
             else:
@@ -125,7 +126,8 @@ class Builder(object):
                 final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name=name) + bias
 
             if Batch_norm:
-                final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
+                final_conv = tf.contrib.layers.instance_norm(final_conv)
+                #final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
 
 
             if Activation: #Prepare for Resnet

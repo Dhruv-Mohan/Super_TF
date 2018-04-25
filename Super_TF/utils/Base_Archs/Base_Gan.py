@@ -8,7 +8,7 @@ class Base_Gan(Architect):
     Type = 'GAN'
     def __init__(self, kwargs):
         super().__init__()
-        self.gen_input_placeholder = tf.placeholder(tf.float32, \
+        self.real_im = tf.placeholder(tf.float32, \
             shape=[None, kwargs['Image_width'], kwargs['Image_height'], kwargs['Image_cspace']], name='Input')
         self.build_params = kwargs
         self.gen_dropout_prob_placeholder = tf.placeholder(tf.float32, name='Gen_Dropout')

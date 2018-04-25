@@ -27,7 +27,7 @@ class Base_Segnet(Architect):
         self.train_step = None
 
         self.accuracy = None
-
+        
     @abstractmethod
     def build_net(self):
         pass
@@ -96,7 +96,7 @@ class Base_Segnet(Architect):
         IO_feed_dict = self.construct_IO_dict(batch)
         train_dict = self.construct_control_dict(Type='TRAIN')
         train_feed_dict = {**IO_feed_dict, **train_dict}
-        session.run([self.train_step, self.update_ops], feed_dict=train_feed_dict)
+        session.run([self.train_step], feed_dict=train_feed_dict)
 
     def test(self, **kwargs):
         if kwargs['session'] is None:
