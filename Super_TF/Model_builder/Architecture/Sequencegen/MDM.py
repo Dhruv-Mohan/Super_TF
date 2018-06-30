@@ -407,8 +407,8 @@ class MDM(Base_RNN):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = cv2.resize(image, (512, 512), 0)
             distance = 0.0
-            pts *=2
-            GT *= 2
+            pts *= 512/299
+            GT *= 512/299
             for i , pt in enumerate(pts):
 
                 gpt = GT[i]

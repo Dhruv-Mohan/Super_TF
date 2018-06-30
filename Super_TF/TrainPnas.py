@@ -12,10 +12,11 @@ _slim_path = '/media/nvme/tfslim/models/research/slim'
 sys.path.append(_slim_path)
 import random
 from preprocessing import inception_preprocessing
-mean_key = [47, 74, 84, 86, 93]
+mean_key = [47, 74, 84, 86, 93, 0, 16, 50, 59]
 _TRAIN_IMAGES_ = '/media/nvme/Datasets/facetag/Test/'
 #_TRAIN_IMAGES_ = '/media/nvme/Datasets/Celeba/img_align_celeba/'
 _VAL_IMAGES_ = '/media/nvme/Datasets/facetag/val/'
+#_VAL_IMAGES_ = '/media/nvme/Datasets/facetag/Test/'
 #_VAL_IMAGES_ = '/media/Disk3/Datasetdir/custom/Test/'
 #_VAL_IMAGES_ = '/media/nvme/Datasets/Celeba/Val/'
 _TAGS_ = '/media/nvme/Datasets/facetag/status/'
@@ -42,7 +43,7 @@ celeba_key = ['5_o_Clock_Shadow',
               'Wearing_Hat', 'Wearing_Lipstick', 'Wearing_Necklace', 'Wearing_Necktie', 'Young']
 
 _SUMMARY_           = True
-_BATCH_SIZE_        = 20
+_BATCH_SIZE_        = 1
 _IMAGE_WIDTH_       = 299
 _IMAGE_HEIGHT_      = 299
 _PAD_WIDTH_ = 299
@@ -62,7 +63,7 @@ _SAVE_ITER_     = 10000
 _GRAD_NORM_     = 0.5
 _RENORM_        = True
 _PATCHES_ = 106
-_TRAINING_ = True
+_TRAINING_ = False
 
 aug = iaa.SomeOf((0, None), [
         #iaa.AdditiveGaussianNoise(scale=(0, 0.002)),
@@ -420,6 +421,7 @@ def main():
             print(gt)
             print(rtr2)
             print(preds)
+            input('test')
             '''
             print('preds')
             for index, val in enumerate(rtr2):
@@ -453,6 +455,6 @@ def main():
         false = float(false) * 100/ float(len(Val_images)) 
         print('True:', true)
         print('False:', false)
-        input('test')
+
 if __name__ == "__main__":
     main()
