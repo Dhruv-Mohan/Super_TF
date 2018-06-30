@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 _SUMMARY_           = True
-_BATCH_SIZE_        = 5
+_BATCH_SIZE_        = 1
 _IMAGE_WIDTH_       = 512
 _IMAGE_HEIGHT_      = 512
 _IMAGE_CSPACE_      = 3

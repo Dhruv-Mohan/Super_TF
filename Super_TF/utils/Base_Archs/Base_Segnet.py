@@ -8,10 +8,21 @@ class Base_Segnet(Architect):
 
     def __init__(self, kwargs):
         super().__init__()
+        '''
         self.input_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'], kwargs['Image_height'],
                                                        kwargs['Image_cspace']], name='Input')
+
         self.output_placeholder = tf.placeholder(tf.float32, shape=[None, kwargs['Image_width'], kwargs['Image_height'],
                                                        kwargs['Classes']], name='Output')
+        '''
+        iter = kwargs['Iter']
+        self.input_placeholder = iter['input']
+        self.output_placeholder = iter['output']
+        self.input_placeholder.set_shape([kwargs['Batch_size'], kwargs['Image_height'], kwargs['Image_width'], 3])
+        self.output_placeholder.set_shape([kwargs['Batch_size'], kwargs['Image_height'], kwargs['Image_width'], 1])
+        self.iter_train_op = kwargs['train_op']
+        self.iter_test_op =kwargs['val_op']
+
         if kwargs['Classes'] is 1:
             self.sigmoid = True
         else:
@@ -81,7 +92,7 @@ class Base_Segnet(Architect):
         D_C = 1 - (2*intersection) / union
         D_L = tf.reduce_mean(D_C)
         tf.summary.scalar('Dice_loss', D_L)
-        self.loss.append(D_L*50)
+        self.loss.append(D_L*5)
         tf.summary.image(name='Input image', tensor=self.input_placeholder)
         tf.summary.image(name='Mask', tensor=self.output_placeholder)
         tf.summary.image(name='Output', tensor=tf.nn.sigmoid(self.output))
@@ -91,11 +102,13 @@ class Base_Segnet(Architect):
             session = tf.get_default_session()
         else:
             session = kwargs['session']
+        session.run(self.iter_train_op)
         #batch = kwargs['data']
-        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
-        IO_feed_dict = self.construct_IO_dict(batch)
+        #batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        #IO_feed_dict = self.construct_IO_dict(batch)
         train_dict = self.construct_control_dict(Type='TRAIN')
-        train_feed_dict = {**IO_feed_dict, **train_dict}
+        train_feed_dict = train_dict
+        #train_feed_dict = {**IO_feed_dict, **train_dict}
         session.run([self.train_step], feed_dict=train_feed_dict)
 
     def test(self, **kwargs):
@@ -104,10 +117,12 @@ class Base_Segnet(Architect):
         else:
             session = kwargs['session']
         #batch = kwargs['data']
-        batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
-        IO_feed_dict = self.construct_IO_dict(batch)
+        session.run(self.iter_test_op)
+        #batch = kwargs['data'].next_batch(self.build_params['Batch_size'])
+        #IO_feed_dict = self.construct_IO_dict(batch)
         test_dict = self.construct_control_dict(Type='TEST')
-        test_feed_dict = {**IO_feed_dict, **test_dict}
+        test_feed_dict = test_dict
+        #test_feed_dict = {**IO_feed_dict, **test_dict}
 
         if self.accuracy is not None:
             summary, _ = session.run([kwargs['merged'], self.accuracy], feed_dict=test_feed_dict)
@@ -117,3 +132,9 @@ class Base_Segnet(Architect):
 
         return summary
 
+
+    def attach_dataset(self, iter, iter_train_op, iter_test_op):
+        self.input_placeholder = iter['input']
+        self.output_placeholder = iter['output']
+        self.iter_train_op = iter_train_op
+        self.iter_test_op = iter_test_op

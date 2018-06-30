@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 import cv2
 import os
+slim = tf.contrib.slim
 
 
 class Model(object):
@@ -16,13 +17,13 @@ class Model(object):
         self.optimizer = None
         self.merged = None
 
-    def Set_optimizer(self, starter_learning_rate=0.0001, decay_steps=100000, decay_rate=None, Optimizer='RMS', Optimizer_params=None, Gradient_norm=None): #0.0001
+    def Set_optimizer(self, starter_learning_rate=0.0001, decay_steps=100000, decay_rate=0.8, Optimizer='RMS', Optimizer_params=None, Gradient_norm=None): #0.0001
         #TODO: CHANGE TO OPTIMIZER FACTORY
         def replace_none_with_zero(i, shape):
             return np.zeros(shape=shape) if i==None else i
 
         if decay_rate is not None:
-            learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=True)
+            learning_rate = tf.train.exponential_decay(starter_learning_rate, self.global_step, decay_steps=decay_steps, decay_rate=decay_rate, staircase=False)
         else:
             learning_rate = starter_learning_rate
         if self.kwargs['Summary'] is True:
@@ -161,13 +162,16 @@ class Model(object):
         #Get default session
         if session is None:
             session = tf.get_default_session()
-        latest_ckpt = tf.train.latest_checkpoint(self.kwargs['Save_dir'] + '/mdl/')
+        latest_ckpt = tf.train.latest_checkpoint(self.kwargs['Save_dir'] + '/logs/')
         if latest_ckpt:
             print('Ckpt_found')
             print(latest_ckpt)
             self.saver.restore(session,latest_ckpt)
         else:
             print('Ckpt_not_found')
+        variables_to_restore = slim.get_model_variables()
+        init_fn = slim.assign_from_checkpoint_fn(self.kwargs['Save_dir'] + '/logs/', variables_to_restore,ignore_missing_vars=True)
+        init_fn(session)
 
     def Predict(self, **kwargs):
         return self.NN_arch.predict(**kwargs)
@@ -191,18 +195,23 @@ class Model(object):
         #data = data.next_batch(1)
         for step in range(iterations):
             print("iter")
-            self.NN_arch.train(session=session, data=data, Batch_size=self.kwargs['Batch_size'])
+            if (step + 1) % log_iteration == 0:
+                summ = self.NN_arch.test(session=session, data=data, Batch_size=self.kwargs['Batch_size'], merged=merged)
+                glo_step = session.run([self.global_step])[0]
+                self.log_writer.add_summary(summ, glo_step)
+            else:
+                self.NN_arch.train(session=session, data=data, Batch_size=self.kwargs['Batch_size'], merged=None)
 
             if (step + 1) % save_iterations == 0:
                 print('Saving Checkpoint')
                 self.saver.save(session, self.kwargs['Save_dir'] + '/mdl/' + self.Model_name + '.ckpt',
                                 global_step=self.global_step)
-
+            '''
             if (step + 1) % log_iteration == 0:
                 test_out = self.NN_arch.test(session=session, data=data, Batch_size=self.kwargs['Batch_size'], merged=merged)
                 glo_step = session.run([self.global_step])[0]
                 self.log_writer.add_summary(test_out, glo_step)
-
+            '''
         """
         for step in range(iterations):
             step = session.run([self.global_step])[0]
@@ -251,6 +260,8 @@ class Model(object):
         """
         #coord.request_stop()
         #coord.join(threads)
+    def attach_dataset(self, iter, iter_train_op, iter_test_op):
+        self.NN_arch.attach_dataset(iter, iter_train_op, iter_test_op)
 
 
 

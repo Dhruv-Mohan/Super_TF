@@ -8,7 +8,10 @@ class Inception_resnet_v2py(Base_Classifier):
     def __init__(self, kwargs):
         super().__init__(kwargs)
         self.Endpoints = {}
-
+        self.ordered_gt_logits = self.split_logits(self.output_placeholder)
+        self.keys = ['eyebrow_shape', 'face_shape', 'is_acc', 'is_eye_open', 'is_hair_vis', 
+        'is_mouth_open', 'is_smiling', 'lip_shape', 'nose_shape','skin_tone', 'which_eye']
+        
     def build_net(self):
         with tf.name_scope('Inception_Resnet_v2_model'):
             with Builder(**self.build_params) as inceprv2_builder:
@@ -170,6 +173,53 @@ class Inception_resnet_v2py(Base_Classifier):
                 drop1 = inceprv2_builder.Dropout_layer(average_pooling)
                 # Output
                 output = inceprv2_builder.FC_layer(drop1, filters=self.build_params['Classes'], readout=True)
-
+                self.ordered_logits = self.split_logits(output)
                 return output
 
+    def split_logits(self, logits):
+    
+        eyebrow_shape = logits[...,0:7]
+        face_shape = logits[...,7:14]
+        acc = logits[...,14:16]
+        eye_open = logits[...,16:18]
+        hair_vis = logits[...,18:20]
+        mouth_open = logits[..., 20:22]
+        smiling = logits[..., 22:24]
+        lip_shape = logits[...,24:33]
+        nose_shape = logits[...,33:41]
+        skin_tone = logits[...,41:46]
+        which_eye = logits[...,46:49]
+
+        return eyebrow_shape, face_shape, acc, eye_open, hair_vis, mouth_open, smiling, lip_shape, nose_shape, skin_tone, which_eye
+
+
+
+    def construct_loss(self):
+        if self.output is None:
+            self.set_output()
+        logit_loss = 0 
+        aux_logit_loss = 0
+        for index, key in enumerate(self.keys):
+            logits = self.ordered_logits[index]
+            gt_logits= self.ordered_gt_logits[index]
+
+            loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=gt_logits, logits=logits))
+            #loss = tf.reduce_mean(tf.losses.softmax_cross_entropy(onehot_labels=gt_logits, logits=logits))
+            tf.summary.scalar('loss/'+key, loss)
+            #aux_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=gt_logits, logits=aux_logits))
+            #aux_loss = tf.reduce_mean(tf.losses.softmax_cross_entropy(onehot_labels=gt_logits, logits=aux_logits))
+            #tf.summary.scalar('aux_loss/'+key, aux_loss)
+            #aux_logit_loss += aux_loss
+            logit_loss += loss
+        self.loss.append(logit_loss)
+        #self.loss.append(aux_logit_loss)
+
+        #total_loss = tf.reduce_mean(tf.losses.get_regularization_losses())
+        #tf.summary.scalar('loss/total', total_loss)
+        #self.loss.append(total_loss)
+
+    def set_accuracy_op(self):
+        for index, key in enumerate(self.keys):
+            correct_prediction = tf.equal(tf.argmax(self.ordered_gt_logits[index], 1), tf.argmax(self.ordered_logits[index], 1))
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            tf.summary.scalar('accuracy/' +key, accuracy)

@@ -104,3 +104,18 @@ class Unet1024(Base_Segnet):
                 Decode7 = stack_decoder(Decode6, Encoder1, out_filters=24, output_shape=[1024,1024], infilter=64)
                 output = unet_res_builder.Conv2d_layer(Decode7, stride=[1, 1, 1, 1], filters=1, Batch_norm=True, k_size=[1, 1], Activation=False) #output
                 return output
+
+    def construct_loss(self):
+        super().construct_loss()
+        output = tf.reshape(self.output, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        output_placeholder = tf.reshape(self.output_placeholder, shape=(-1, self.build_params['Image_width'] * self.build_params['Image_height']))
+        Probs = tf.nn.sigmoid(output)
+        offset = 1e-5
+        Threshold = 0.01
+        Probs_processed = tf.clip_by_value(Probs, offset, 1.0)
+        Con_Probs_processed = tf.clip_by_value(1-Probs, offset, 1.0)
+        W_I = (-output_placeholder * tf.log(Probs_processed) - (1 - output_placeholder)*tf.log(Con_Probs_processed))
+        Weighted_BCE_loss = tf.reduce_sum(W_I) / tf.cast(tf.maximum(tf.count_nonzero(W_I -Threshold),0), tf.float32)
+        tf.summary.scalar('WBCE loss', Weighted_BCE_loss)
+        tf.summary.image('WCBE', tf.reshape(W_I, [-1, self.build_params['Image_width'], self.build_params['Image_height'], 1]))
+        self.loss.append(Weighted_BCE_loss*10)

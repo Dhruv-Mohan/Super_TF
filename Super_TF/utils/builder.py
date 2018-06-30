@@ -61,12 +61,13 @@ class Builder(object):
     def Weight_variable(self, shape, weight_decay=0.000004):
         with tf.variable_scope('Weight') as scope:
             #weights = tf.get_variable(name='Weight', initializer=tf.truncated_normal(shape, stddev=0.1), trainable=True, regularizer=self.Regloss_l2)
-            initi = tf.contrib.layers.xavier_initializer()
+            initi = tf.contrib.layers.xavier_initializer(False)
+            regularizer = tf.contrib.layers.l2_regularizer(scale=0.00005)
             #initi = tf.orthogonal_initializer()
-            #initi = tf.random_uniform_initializer(minval=-0.08, maxval=0.08)
+            #initi = tf.random_uniform_initializer(minval=-0.03, maxval=0.03)
             #initi =tf.truncated_normal_initializer(0.02)
             if self.share_vars:
-                weights = tf.get_variable('weights', shape=shape, initializer=initi)
+                weights = tf.get_variable('weights', shape=shape, initializer=initi, regularizer=regularizer)
             else:
                 weights = tf.Variable(initi(shape))
                 tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.nn.l2_loss(weights)* weight_decay)
@@ -126,8 +127,8 @@ class Builder(object):
                 final_conv = tf.nn.conv2d(input, weights, strides=stride, padding=padding, name=name) + bias
 
             if Batch_norm:
-                final_conv = tf.contrib.layers.instance_norm(final_conv)
-                #final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
+                #final_conv = tf.contrib.layers.instance_norm(final_conv)
+                final_conv = self.Batch_norm(final_conv, batch_type=batch_type)
 
 
             if Activation: #Prepare for Resnet
@@ -351,8 +352,9 @@ class Builder(object):
                  bnscope.reuse_variables()
     '''
     def Batch_norm(self, input, *, batch_type, decay=0.9, epsilon=0.001, scope=None):
-        output = tf.keras.layers.BatchNormalization(scale=False, momentum=0.99)(input, training=self.State)
-        #output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=self.State, renorm=self.renorm, trainable=True, renorm_clipping=self.renorm_dict, reuse=False, fused=True)
+        #output = tf.keras.layers.BatchNormalization(scale=False, momentum=0.99)(input, training=self.State)
+        output = tf.contrib.layers.instance_norm(input)
+        #output = tf.layers.batch_normalization(input, momentum=decay, epsilon=epsilon, training=True, renorm=False, trainable=True, renorm_clipping=self.renorm_dict, reuse=False, fused=True)
         return output
     '''
             shape = input.get_shape().as_list()

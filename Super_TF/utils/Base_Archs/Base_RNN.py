@@ -8,9 +8,10 @@ class Base_RNN(Architect):
 
     def __init__(self, kwargs):
         super().__init__()
-        self.input_placeholder = None
-        self.input_seq_placeholder = tf.placeholder(tf.int32, shape=[None, kwargs['Padded_length']], name='Input_Seq')
-        self.target_seq_placeholder = tf.placeholder(tf.int32, shape=[None, kwargs['Padded_length']], name='Target_Seq')
+
+        #self.input_placeholder = None
+        #self.input_seq_placeholder = tf.placeholder(tf.int32, shape=[None, kwargs['Padded_length']], name='Input_Seq')
+        #self.target_seq_placeholder = tf.placeholder(tf.int32, shape=[None, kwargs['Padded_length']], name='Target_Seq')
         self.mask_placeholder = tf.placeholder(tf.int32, shape=[None, kwargs['Padded_length']], name='Seq_Mask')
         self.build_params = kwargs
         self.dropout_placeholder = tf.placeholder(tf.float32, name='Dropout')
@@ -27,12 +28,13 @@ class Base_RNN(Architect):
         self.Predict_op = tf.argmax(self.output, 1)
 
     def set_accuracy_op(self):
-        correct_prediction = tf.equal(tf.argmax(self.output, 1), tf.reshape(tf.cast(tf.reshape(self.target_seq_placeholder, shape=[-1]), tf.int64), [-1]))
-        pre_acc = tf.to_float(correct_prediction) * tf.to_float(tf.reshape(self.mask_placeholder, [-1]))
-        pre_acc = tf.reduce_sum(pre_acc)
-        self.accuracy = tf.div(pre_acc,  tf.maximum(1.0,tf.reduce_sum(tf.to_float(tf.reshape(self.mask_placeholder, [-1])))))
-        tf.reduce_sum(tf.to_float(tf.reshape(self.mask_placeholder, [-1])))
-        tf.summary.scalar('accuracy', self.accuracy)
+        return 1
+        #correct_prediction = tf.equal(tf.argmax(self.output, 1), tf.reshape(tf.cast(tf.reshape(self.target_seq_placeholder, shape=[-1]), tf.int64), [-1]))
+        #pre_acc = tf.to_float(correct_prediction) * tf.to_float(tf.reshape(self.mask_placeholder, [-1]))
+        #pre_acc = tf.reduce_sum(pre_acc)
+        #self.accuracy = tf.div(pre_acc,  tf.maximum(1.0,tf.reduce_sum(tf.to_float(tf.reshape(self.mask_placeholder, [-1])))))
+        #tf.reduce_sum(tf.to_float(tf.reshape(self.mask_placeholder, [-1])))
+        #tf.summary.scalar('accuracy', self.accuracy)
 
     def construct_IO_dict(self, batch):
         return {self.input_placeholder: batch[0], self.input_seq_placeholder: batch[1], self.target_seq_placeholder: batch[2], self.mask_placeholder: batch[3]}
@@ -45,9 +47,20 @@ class Base_RNN(Architect):
             return {self.dropout_placeholder: 1, self.state_placeholder: self.build_params['State']}
 
     def set_train_ops(self, optimizer):
-        loss = tf.add_n(self.loss, 'Loss_accu')
-        self.train_step = optimizer.minimize(loss, global_step=self.global_step)
 
+        reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        self.loss + reg_losses
+        #self.loss.append(reg_losses)
+        loss = tf.add_n(self.loss, 'Loss_accu')
+
+        self.dis_loss = tf.reduce_mean(loss)
+        tf.summary.scalar('loss', self.dis_loss)
+        #vars = tf.trainable_variables()
+        #grads, tvars = zip(*optimizer.compute_gradients(loss, var_list=vars))
+        #grads, _ = tf.clip_by_global_norm(grads,  3)
+        #self.train_step = optimizer.apply_gradients(zip(grads, vars), global_step=self.global_step)
+        self.train_step = optimizer.minimize(loss, global_step=self.global_step)
+        
     def predict(self, **kwargs):
         if kwargs['session'] is None:
             session = tf.get_default_session()
@@ -90,3 +103,10 @@ class Base_RNN(Architect):
             summary = session.run([kwargs['merged']], feed_dict=test_feed_dict)[0]
 
         return summary
+
+    def attach_dataset(self, iter, iter_train_op, iter_test_op):
+        self.input_placeholder = iter['input']
+        self.input_seq_placeholder = iter['mean_pts']
+        self.target_seq_placeholder = iter['target_pts']
+        self.iter_train_op = iter_train_op
+        self.iter_test_op = iter_test_op
