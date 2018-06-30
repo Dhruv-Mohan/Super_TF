@@ -102,7 +102,7 @@ class MDM(Base_RNN):
             with Builder(**self.build_params) as conv_builder:
                 print('inp shape', inputs.get_shape().as_list())
                 #inputs = tf.stop_gradient(inputs)
-                inputs = tf.reshape(inputs, (self.build_params['Batch_size'] , 106 * 32, 32, 3))
+                inputs = tf.reshape(inputs, (self.build_params['Batch_size'] , self.build_params['Patches'] * 32, 32, 3))
                 print('inp shape', inputs.get_shape().as_list())
                 #input('wait')
                 self.patches = inputs
@@ -123,7 +123,7 @@ class MDM(Base_RNN):
                 image_embeddings = tf.reshape(inputs, (self.build_params['Batch_size'], -1))
                 features = rnn_builder.Concat([image_embeddings, hidden_state], axis=1)
                 hidden_state = tf.tanh(rnn_builder.FC_layer(features, filters=256, flatten=False, readout=True))
-                processed_preds = rnn_builder.FC_layer(hidden_state, filters=2*106, readout=True, name='Preds')
+                processed_preds = rnn_builder.FC_layer(hidden_state, filters=2*self.build_params['Patches'], readout=True, name='Preds')
 
                 return processed_preds, hidden_state
 
@@ -169,8 +169,8 @@ class MDM(Base_RNN):
          return patches
 
     def split_logits(self, logits, output=True):
-            celeba_attrs = logits[...,0:2]
-            celeba_lms = logits[..., 2:12]
+            celeba_attrs = logits[..., 0:self.build_params['Classes']]
+            celeba_lms = logits[..., self.build_params['Classes']: self.build_params['Classes'] + self.build_params['core_pts']]
             if output:
                 celeba_lms *= 20
                 celeba_lms += self.incep_mean
@@ -254,7 +254,7 @@ class MDM(Base_RNN):
                 with slim.arg_scope([slim.fully_connected], weights_regularizer=slim.l2_regularizer(5e-5)):
                     hidden_state = slim.fully_connected(tf.concat([features, hidden_state], axis=1), 512, activation_fn=tf.tanh)
                 prediction = slim.linear(hidden_state, self.build_params['Patches'] * 2, scope='pred')
-                if step is 0:
+                if step is 2: #0
                     prediction *=1.5
             prediction = tf.reshape(prediction, (self.build_params['Batch_size'] , self.build_params['Patches'], 2))
             deltas += prediction
@@ -407,8 +407,8 @@ class MDM(Base_RNN):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = cv2.resize(image, (512, 512), 0)
             distance = 0.0
-            pts *= 512/299
-            GT *= 512/299
+            pts *= 512/ self.build_params['Image_width']
+            GT *= 512/ self.build_params['Image_width']
             for i , pt in enumerate(pts):
 
                 gpt = GT[i]
@@ -418,7 +418,7 @@ class MDM(Base_RNN):
                 cv2.circle(image, pred_pt, 2, (255,0,0))
                 cv2.line(image, pred_pt, grnd_pt, (0,0,255))
 
-            distance /= 106
+            distance /= self.build_params['Patches']
             l1_loss += distance
             print('L1_Loss: ', l1_loss/ counter)
 
@@ -458,7 +458,7 @@ class MDM(Base_RNN):
             tf.summary.scalar('norm_loss_level_' + str(indx), norm_rms_loss)
             self.loss.append(norm_rms_loss)
         '''
-        def normalized_rmse(pred, gt_truth, n_landmarks=106, left_eye_index=75, right_eye_index=85):
+        def normalized_rmse(pred, gt_truth, n_landmarks=self.build_params['Patches'], left_eye_index=75, right_eye_index=85):
             norm = tf.sqrt(1e-12 + tf.reduce_sum(((gt_truth[:, left_eye_index, :] - gt_truth[:, right_eye_index, :]) ** 2), 1))
 
             return tf.reduce_sum(tf.sqrt(1e-12 + tf.reduce_sum(tf.square(pred - gt_truth), 2)), 1) / (norm * n_landmarks)
@@ -466,7 +466,7 @@ class MDM(Base_RNN):
         if self.celeba:
             multi_class_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=self.ordered_gt_logits, logits=self.ordered_logits)*0.2
             tf.summary.scalar('losses/multi_class_loss', multi_class_loss)
-            lm_loss = normalized_rmse(self.ordered_lms, self.ordered_gt_lms, n_landmarks = 5, left_eye_index = 0, right_eye_index = 1)
+            lm_loss = normalized_rmse(self.ordered_lms, self.ordered_gt_lms, n_landmarks = self.build_params['core_pts'], left_eye_index = 0, right_eye_index = 1)
             lm_loss = tf.losses.compute_weighted_loss(lm_loss)
             tf.summary.scalar('loss/incep_landmarks', tf.reduce_mean(lm_loss))
         gt_truth = self.target_seq_placeholder

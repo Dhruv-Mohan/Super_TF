@@ -49,7 +49,7 @@ _IMAGE_HEIGHT_      = 299
 _PAD_WIDTH_ = 299
 _PAD_HEIGHT_ = 299
 _IMAGE_CSPACE_      = 3
-_CLASSES_           = 12
+_CLASSES_           = 2
 _MODEL_NAME_        ='MDM'
 _ITERATIONS_        = 500000
 _LEARNING_RATE_     =  0.01
@@ -63,6 +63,7 @@ _SAVE_ITER_     = 10000
 _GRAD_NORM_     = 0.5
 _RENORM_        = True
 _PATCHES_ = 106
+_CORE_PTS_ = 9
 _TRAINING_ = False
 
 aug = iaa.SomeOf((0, None), [
@@ -150,7 +151,7 @@ def get_pts(filename):
     with open(filename) as f:
         data= f.read().split()
         data = np.asarray(data, np.float32)
-        data = np.reshape(data, (106,2))
+        data = np.reshape(data, (_PATCHES_, 2))
     return data
 
 
@@ -318,9 +319,9 @@ def decode_img_lmpts(image1):
     #image = inception_preprocessing.preprocess_image(image, _IMAGE_HEIGHT_, _IMAGE_WIDTH_, is_training=False)
     image.set_shape([_PAD_WIDTH_, _PAD_WIDTH_, 3])
     gt_data.set_shape([_CLASSES_])
-    lmpts.set_shape([106, 2])
-    mean_pts.set_shape([106, 2])
-    incep_mean_pts.set_shape([10])
+    lmpts.set_shape([_PATCHES_, 2])
+    mean_pts.set_shape([_PATCHES_, 2])
+    incep_mean_pts.set_shape([_CORE_PTS_ * 2])
     return gt_data, image, lmpts, mean_pts, incep_mean_pts
 
 '''
@@ -386,7 +387,7 @@ def main():
                 Batch_size=_BATCH_SIZE_, Image_width=_IMAGE_WIDTH_, Image_height=_IMAGE_HEIGHT_,\
                Image_cspace=_IMAGE_CSPACE_, Classes=_CLASSES_, Save_dir=_SAVE_DIR_, \
                State=_STATE_, Dropout=_DROPOUT_, Grad_norm=_GRAD_NORM_, Renorm = _RENORM_, 
-                           iter=train_iterator, handle=handle, train_iter= train_iterator,
+                           iter=train_iterator, handle=handle, train_iter= train_iterator, core_pts = _CORE_PTS_,
                           test_iter= test_iterator, Patches=_PATCHES_, Training= _TRAINING_ )
 
     Optimizer_params_adam = {'beta1': 0.9, 'beta2':0.999, 'epsilon':0.1}
