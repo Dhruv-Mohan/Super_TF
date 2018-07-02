@@ -13,6 +13,7 @@ slim = tf.contrib.slim
 #from nets.nasnet import pnasnet
 from nets import inception_resnet_v2
 from tensorflow.python.platform import tf_logging as logging
+import pickle
 
 class MDM(Base_RNN):
     """MDM for facial landmark tracking"""
@@ -170,11 +171,11 @@ class MDM(Base_RNN):
 
     def split_logits(self, logits, output=True):
             celeba_attrs = logits[..., 0:self.build_params['Classes']]
-            celeba_lms = logits[..., self.build_params['Classes']: self.build_params['Classes'] + self.build_params['core_pts']]
+            celeba_lms = logits[..., self.build_params['Classes']: self.build_params['Classes'] + self.build_params['core_pts']*2]
             if output:
                 celeba_lms *= 20
                 celeba_lms += self.incep_mean
-            celeba_lms = tf.reshape(celeba_lms, [-1, 5, 2])
+            celeba_lms = tf.reshape(celeba_lms, [-1, self.build_params['core_pts'], 2])
             return celeba_attrs, celeba_lms
 
             eyebrow_shape = logits[...,0:7]
@@ -226,7 +227,8 @@ class MDM(Base_RNN):
     def build_net(self):
         #sampling_grid = self.build_sampling_grid(patch_shape)
         with slim.arg_scope(inception_resnet_v2.inception_resnet_v2_arg_scope()):
-            net, endpoints = inception_resnet_v2.inception_resnet_v2(self.class_image, num_classes=self.build_params['Classes'], is_training=self.training, create_aux_logits=False)
+            net, endpoints = inception_resnet_v2.inception_resnet_v2(self.class_image, num_classes=self.build_params['Classes'] + self.build_params['core_pts']*2,
+                                                                     is_training=self.training, create_aux_logits=False)
             self.fine_tune()
             vectors = endpoints['Conv2d_7b_1x1']
             vectors_flat = slim.flatten(vectors)
@@ -254,8 +256,8 @@ class MDM(Base_RNN):
                 with slim.arg_scope([slim.fully_connected], weights_regularizer=slim.l2_regularizer(5e-5)):
                     hidden_state = slim.fully_connected(tf.concat([features, hidden_state], axis=1), 512, activation_fn=tf.tanh)
                 prediction = slim.linear(hidden_state, self.build_params['Patches'] * 2, scope='pred')
-                if step is 2: #0
-                    prediction *=1.5
+                #if step is 2: #0
+                prediction *= 20
             prediction = tf.reshape(prediction, (self.build_params['Batch_size'] , self.build_params['Patches'], 2))
             deltas += prediction
             self.predictions.append(init_mdm_pts + deltas)
@@ -393,13 +395,13 @@ class MDM(Base_RNN):
         #predict_feed_dict = {**predict_io_dict, **test_dict}
         index = 0
         l1_loss = 0.0
-        counter = 1
         smiling = 0.0
         accesory = 0.0
         while(1):
             pts, GT, image, tags, gt_tags =  session.run([self.Predict_op3, self.target_seq_placeholder, self.input_placeholder, self.eput[0], self.class_tags[0]], feed_dict=predict_feed_dict)
             pts = pts[0]
             GT = GT[0]
+            gt_tags = gt_tags[0:self.build_params['Classes']]
             image = image[0]
             image /= 2
             image += 0.5
@@ -409,21 +411,26 @@ class MDM(Base_RNN):
             distance = 0.0
             pts *= 512/ self.build_params['Image_width']
             GT *= 512/ self.build_params['Image_width']
-            for i , pt in enumerate(pts):
+            l1_distances = []
+            for i, pt in enumerate(pts):
 
                 gpt = GT[i]
-                distance += np.sqrt(np.square(pt[0] - gpt[0]) + np.square(pt[1] - gpt[1]))
+                single_pt_distance = np.sqrt(np.square(pt[0] - gpt[0]) + np.square(pt[1] - gpt[1]))
+                l1_distances.append(single_pt_distance)
+                distance += single_pt_distance
                 pred_pt = (int(pt[0]), int(pt[1]))
                 grnd_pt = (int(gpt[0]), int(gpt[1]))
                 cv2.circle(image, pred_pt, 2, (255,0,0))
                 cv2.line(image, pred_pt, grnd_pt, (0,0,255))
 
-            distance /= self.build_params['Patches']
-            l1_loss += distance
-            print('L1_Loss: ', l1_loss/ counter)
 
 
-            cv2.imwrite('/media/Disk3/Projects/PersonalGit/Tensorflow_Playground/Super_TF/out/' + str(index) + '.jpg', image)
+
+            cv2.imwrite('/media/Disk3/Projects/PersonalGit/Tensorflow_Playground/Super_TF/out/Images/' + str(index) + '.jpg', image)
+            results_dict={'L1_error': np.asarray(l1_distances), 'GT_tags':gt_tags, 'PREDS':tags}
+            with open('out/pickle/'+str(index) +'.pickle', 'wb') as pick_out:
+                pickle.dump(results_dict,pick_out)
+
             index +=1
             thre, rtr = cv2.threshold(tags, 0.5, 1, cv2.THRESH_BINARY)
             rtr = np.squeeze(rtr)
@@ -434,13 +441,18 @@ class MDM(Base_RNN):
             if rtr2[1] == gt[1]:
                 accesory +=1
 
-            print('Smiling: ', smiling / counter)
-            print('Accesory: ', accesory / counter)
-            counter += 1
+            distance /= self.build_params['Patches']
+            l1_loss += distance
+            print('L1_Loss: ', l1_loss/ index)
+            print('Smiling: ', smiling / index)
+            print('Accesory: ', accesory / index)
+
             print(gt)
 
             print(rtr2)
             print(tags)
+
+
             #input('cra')
             #cv2.imshow('image', image)
             #cv2.waitKey(0)

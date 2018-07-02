@@ -11,8 +11,9 @@ import sys
 _slim_path = '/media/nvme/tfslim/models/research/slim'
 sys.path.append(_slim_path)
 import random
+import imgaug as ia
 from preprocessing import inception_preprocessing
-mean_key = [47, 74, 84, 86, 93, 0, 16, 50, 59]
+mean_key = [47, 74, 84, 86, 93, 0, 16, 50, 59, 32]
 _TRAIN_IMAGES_ = '/media/nvme/Datasets/facetag/Test/'
 #_TRAIN_IMAGES_ = '/media/nvme/Datasets/Celeba/img_align_celeba/'
 _VAL_IMAGES_ = '/media/nvme/Datasets/facetag/val/'
@@ -43,7 +44,7 @@ celeba_key = ['5_o_Clock_Shadow',
               'Wearing_Hat', 'Wearing_Lipstick', 'Wearing_Necklace', 'Wearing_Necktie', 'Young']
 
 _SUMMARY_           = True
-_BATCH_SIZE_        = 1
+_BATCH_SIZE_        = 22
 _IMAGE_WIDTH_       = 299
 _IMAGE_HEIGHT_      = 299
 _PAD_WIDTH_ = 299
@@ -63,23 +64,24 @@ _SAVE_ITER_     = 10000
 _GRAD_NORM_     = 0.5
 _RENORM_        = True
 _PATCHES_ = 106
-_CORE_PTS_ = 9
+_CORE_PTS_ = 10
 _TRAINING_ = False
 
-aug = iaa.SomeOf((0, None), [
-        #iaa.AdditiveGaussianNoise(scale=(0, 0.002)),
-        iaa.Noop(),
-        iaa.GaussianBlur(sigma=(0.0, 1.5)),
-        iaa.Dropout(p=(0, 0.02)),
-        iaa.AddElementwise((-40, 40), per_channel=0.5),
-        iaa.AdditiveGaussianNoise(scale=(0, 0.05*1)),
-        #iaa.ContrastNormalization((0.5, 1.5)),
-        #iaa.Affine(scale=(1.0, 1.2)),
-        #iaa.Affine(rotate=(-10, 10)),
-        #iaa.Affine(shear=(-16, 16))
+if not _TRAINING_:
+    _BATCH_SIZE_ = 1
 
-        #iaa.CoarseDropout(0.2, size_percent=(0.001, 0.2))
-        ], random_order=True)
+aug = iaa.SomeOf((0, None), [
+    # iaa.AdditiveGaussianNoise(scale=(0, 0.002)),
+    iaa.Noop(),
+    iaa.GaussianBlur(sigma=(0.0, 1.5)),
+    #iaa.Dropout(p=(0, 0.02)),
+    iaa.AddElementwise((-40, 40), per_channel=0.5),
+    iaa.AdditiveGaussianNoise(scale=(0, 0.05 * 1)),
+    # iaa.ContrastNormalization((0.5, 1.5)),
+    iaa.Affine(scale=(0.8, 1.2), translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)}, rotate=(-30, 30), shear=(-16, 16), mode=['edge'])
+    #iaa.pad()
+    # iaa.CoarseDropout(0.2, size_percent=(0.001, 0.2))
+], random_order=True)
 
 
 def apply_tansform_mat(landmarks, M):
@@ -308,7 +310,23 @@ def get_image_tags_points(path):
     image = get_classification_image(path)
     GT_data = get_tags(name)
     lmpts, mean_pts = get_landmarks_and_mean(name)
+    aug_det = aug.to_deterministic()
+    if _TRAINING_:
+        kps = []
+        kps_on_im = []
+        for pt in lmpts:
+            kps.append(ia.Keypoint(x=pt[0], y=pt[1]))
+
+        kps_on_im.append(ia.KeypointsOnImage(kps, shape=image.shape))
+        image = aug_det.augment_image(image)
+        kps_on_im = aug_det.augment_keypoints(kps_on_im)[0]
+        kps = kps_on_im.keypoints
+        for i, kp in enumerate(kps):
+            lmpts[i, 0] = kp.x
+            lmpts[i, 1] = kp.y
+
     lm_image, lmpts, mean_pts , incep_mean_pts, incep_lm_gt = align_landmark_image(image, lmpts, mean_pts)
+
     #augment_image_and_keypoints()
     #augment_image_and_keypoints
     GT_data = np.concatenate((GT_data, incep_lm_gt), axis=0)
@@ -318,7 +336,7 @@ def decode_img_lmpts(image1):
     gt_data, image, lmpts, mean_pts, incep_mean_pts= tf.py_func(get_image_tags_points, [image1], (tf.float32, tf.float32, tf.float32, tf.float32, tf.float32))
     #image = inception_preprocessing.preprocess_image(image, _IMAGE_HEIGHT_, _IMAGE_WIDTH_, is_training=False)
     image.set_shape([_PAD_WIDTH_, _PAD_WIDTH_, 3])
-    gt_data.set_shape([_CLASSES_])
+    gt_data.set_shape([_CLASSES_ + _CORE_PTS_ * 2])
     lmpts.set_shape([_PATCHES_, 2])
     mean_pts.set_shape([_PATCHES_, 2])
     incep_mean_pts.set_shape([_CORE_PTS_ * 2])
