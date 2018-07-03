@@ -26,10 +26,10 @@ class MDM(Base_RNN):
 
         #self.input_placeholder = tf.placeholder(tf.float32, [None, None, 3])
         #ass  = tf.assign(self.input_placeholder, iter['input'])
-        self.class_tags, self.input_placeholder, self.target_seq_placeholder, self.input_seq_placeholder, \
+        self.class_image, self.class_tags, self.input_placeholder, self.target_seq_placeholder, self.input_seq_placeholder, \
             self.incep_mean = iter.get_next()
 
-        self.class_image = self.input_placeholder
+        #self.class_image = self.input_placeholder
         self.ordered_gt_logits, self.ordered_gt_lms = self.split_logits(self.class_tags, False)
         #self.input_seq_placeholder = iter['mean_pts']
         #self.target_seq_placeholder = iter['target_pts']
@@ -210,6 +210,7 @@ class MDM(Base_RNN):
     def align_input_shape(self, incep_pts, gt_pts, init_mdm_pts):
 
         out_init_mdm_pts = []
+        init_mdm_pts = init_mdm_pts * (199/299)
         for index, inceppts in enumerate(incep_pts):
             gtpts = gt_pts[index]
             initmdmpts = init_mdm_pts[index]
@@ -235,15 +236,15 @@ class MDM(Base_RNN):
             hidden_state = slim.fully_connected(vectors_flat, 512, activation_fn=None, scope='Hidden_state')
             self.output = net
             self.ordered_logits, self.ordered_lms = self.split_logits(self.output)
-            init_mdm_pts = tf.py_func(self.align_input_shape,
-                                      [self.incep_mean, self.ordered_lms, self.input_seq_placeholder], tf.float32)
+            #init_mdm_pts = self.input_seq_placeholder
+            self.init_mdm_pts = tf.py_func(self.align_input_shape, [self.incep_mean, self.ordered_lms, self.input_seq_placeholder], tf.float32)
 
         #hidden_state = tf.zeros((self.build_params['Batch_size'], 512))
         deltas = tf.zeros((self.build_params['Batch_size'], self.build_params['Patches'], 2))
         self.predictions = []
         for step in range(3):
             with tf.device('/cpu:0'):
-                    patches = self.get_image_patches((32,32), self.input_seq_placeholder + deltas)
+                    patches = self.get_image_patches((32,32), self.init_mdm_pts + deltas)
                     patches = tf.stop_gradient(patches)     
                     patches = tf.reshape(patches, (self.build_params['Batch_size'] , self.build_params['Patches'] * 32, 32, 3))       
 
@@ -257,10 +258,10 @@ class MDM(Base_RNN):
                     hidden_state = slim.fully_connected(tf.concat([features, hidden_state], axis=1), 512, activation_fn=tf.tanh)
                 prediction = slim.linear(hidden_state, self.build_params['Patches'] * 2, scope='pred')
                 #if step is 2: #0
-                prediction *= 20
+                prediction *= 2
             prediction = tf.reshape(prediction, (self.build_params['Batch_size'] , self.build_params['Patches'], 2))
             deltas += prediction
-            self.predictions.append(init_mdm_pts + deltas)
+            self.predictions.append(self.init_mdm_pts + deltas)
 
     '''
     def build_net(self):
@@ -366,7 +367,7 @@ class MDM(Base_RNN):
         pts = self.Predict_op3[0]
 
         im, im2, im3 = tf.py_func(self.draw_landmarks, [images, self.Predict_op[0], self.Predict_op2[0], pts, self.target_seq_placeholder[0]], (tf.float32, tf.float32, tf.float32))
-        core_im = tf.py_func(self.draw_core_landmarks, [self.input_placeholder[0], self.ordered_lms[0]], (tf.float32))
+        core_im = tf.py_func(self.draw_core_landmarks, [images, self.ordered_lms[0] *(199/299)], (tf.float32))
         core_im = tf.expand_dims(core_im, axis=0)
         #im1 = tf.py_func(self.draw_landmarks, [images, self.Predict_op[0], self.target_seq_placeholder[0]], tf.float32)
         #im2 = tf.py_func(self.draw_landmarks, [images, self.Predict_op2[0], self.target_seq_placeholder[0]], tf.float32)

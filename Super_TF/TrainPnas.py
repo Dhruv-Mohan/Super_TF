@@ -47,8 +47,8 @@ _SUMMARY_           = True
 _BATCH_SIZE_        = 22
 _IMAGE_WIDTH_       = 299
 _IMAGE_HEIGHT_      = 299
-_PAD_WIDTH_ = 299
-_PAD_HEIGHT_ = 299
+_PAD_WIDTH_ = 199
+_PAD_HEIGHT_ = 199
 _IMAGE_CSPACE_      = 3
 _CLASSES_           = 2
 _MODEL_NAME_        ='MDM'
@@ -65,7 +65,7 @@ _GRAD_NORM_     = 0.5
 _RENORM_        = True
 _PATCHES_ = 106
 _CORE_PTS_ = 10
-_TRAINING_ = False
+_TRAINING_ = True
 
 if not _TRAINING_:
     _BATCH_SIZE_ = 1
@@ -75,10 +75,10 @@ aug = iaa.SomeOf((0, None), [
     iaa.Noop(),
     iaa.GaussianBlur(sigma=(0.0, 1.5)),
     #iaa.Dropout(p=(0, 0.02)),
-    iaa.AddElementwise((-40, 40), per_channel=0.5),
+    iaa.AddElementwise((-20, 20), per_channel=0.5),
     iaa.AdditiveGaussianNoise(scale=(0, 0.05 * 1)),
     # iaa.ContrastNormalization((0.5, 1.5)),
-    iaa.Affine(scale=(0.8, 1.2), translate_percent={"x": (-0.2, 0.2), "y": (-0.2, 0.2)}, rotate=(-30, 30), shear=(-16, 16), mode=['edge'])
+    iaa.Affine(scale=(0.9, 1.1), translate_percent={"x": (-0.05, 0.08), "y": (-0.01, 0.015)}, rotate=(-10, 10), shear=(-4,4), mode=['edge'])
     #iaa.pad()
     # iaa.CoarseDropout(0.2, size_percent=(0.001, 0.2))
 ], random_order=True)
@@ -157,17 +157,17 @@ def get_pts(filename):
     return data
 
 
-def pad_image(image, init_pts, mean_pts):
-    shape = [_PAD_WIDTH_, _PAD_HEIGHT_]
+def pad_image(image, init_pts, mean_pts, shape):
+
     canvas = np.zeros(shape + [3], np.uint8)
     im_shape = image.shape
     index = 0
     if im_shape[0] <= im_shape[1]:
         index = 1
 
-    resize_factor = _PAD_HEIGHT_ / float(im_shape[index])
+    resize_factor = shape[1] / float(im_shape[index])
     new_shape = [0, 0]
-    new_shape[index] = _PAD_HEIGHT_
+    new_shape[index] = shape[1]
     new_shape[abs(index-1)] = int(resize_factor * im_shape[abs(index - 1)])
     image = cv2.resize(image, (new_shape[1], new_shape[0]), 0)
     canvas[0: new_shape[0], 0:new_shape[1]] = image
@@ -279,16 +279,21 @@ def get_landmarks_and_mean(name):
 
 def align_landmark_image(image, lmpts, mean_pts):
     shape2 = image.shape
-    lm_image, lmpts, mean_pts = pad_image(image, lmpts, mean_pts)
-    lmpts[:,0] = lmpts[:, 0] /shape2[1]
-    lmpts[:,1] = lmpts[:, 1] /shape2[0]
+    cls_image, lmpts2, mean_pts2 = pad_image(image.copy(), lmpts.copy(), mean_pts.copy(), shape=[_IMAGE_WIDTH_, _IMAGE_HEIGHT_])
+    lmpts2[:,0] = lmpts2[:, 0] /shape2[1]
+    lmpts2[:,1] = lmpts2[:, 1] /shape2[0]
 
     incep_mean_pts = []
     incep_gt = []
     for key in mean_key:
-        incep_mean_pts.append(mean_pts[key])
-        incep_gt.append(lmpts[key])
+        incep_mean_pts.append(mean_pts2[key])
+        incep_gt.append(lmpts2[key])
     incep_mean_pts = np.asarray(incep_mean_pts)
+
+    lm_image, lmpts, mean_pts = pad_image(image, lmpts, mean_pts, shape=[_PAD_WIDTH_, _PAD_HEIGHT_])
+    lmpts[:,0] = lmpts[:, 0] /shape2[1]
+    lmpts[:,1] = lmpts[:, 1] /shape2[0]
+
     #incep_mean_pts[..., 0] *= _IMAGE_WIDTH_
     #incep_mean_pts[..., 1] *= _IMAGE_HEIGHT_
     incep_mean_pts = np.asarray(incep_mean_pts).reshape([-1])
@@ -301,7 +306,12 @@ def align_landmark_image(image, lmpts, mean_pts):
     lm_image -= 0.5
     lm_image *= 2.0
 
-    return lm_image, lmpts, mean_pts, incep_mean_pts, incep_gt
+    cls_image = cls_image.astype(np.float32)
+    cls_image = cls_image / 255.0
+    cls_image -= 0.5
+    cls_image *= 2.0
+
+    return cls_image, lm_image, lmpts, mean_pts2, incep_mean_pts, incep_gt
 
 def get_image_tags_points(path):
     name = os.path.split(path.decode())[1]
@@ -325,22 +335,23 @@ def get_image_tags_points(path):
             lmpts[i, 0] = kp.x
             lmpts[i, 1] = kp.y
 
-    lm_image, lmpts, mean_pts , incep_mean_pts, incep_lm_gt = align_landmark_image(image, lmpts, mean_pts)
+    cls_image, lm_image, lmpts, mean_pts , incep_mean_pts, incep_lm_gt = align_landmark_image(image.copy(), lmpts.copy(), mean_pts.copy())
 
     #augment_image_and_keypoints()
     #augment_image_and_keypoints
     GT_data = np.concatenate((GT_data, incep_lm_gt), axis=0)
-    return GT_data, lm_image, lmpts, mean_pts, incep_mean_pts
+    return cls_image, GT_data, lm_image, lmpts, mean_pts, incep_mean_pts
 
 def decode_img_lmpts(image1):
-    gt_data, image, lmpts, mean_pts, incep_mean_pts= tf.py_func(get_image_tags_points, [image1], (tf.float32, tf.float32, tf.float32, tf.float32, tf.float32))
+    cls_image, gt_data, image, lmpts, mean_pts, incep_mean_pts= tf.py_func(get_image_tags_points, [image1], (tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32))
     #image = inception_preprocessing.preprocess_image(image, _IMAGE_HEIGHT_, _IMAGE_WIDTH_, is_training=False)
+    cls_image.set_shape([_IMAGE_HEIGHT_, _IMAGE_WIDTH_, 3])
     image.set_shape([_PAD_WIDTH_, _PAD_WIDTH_, 3])
     gt_data.set_shape([_CLASSES_ + _CORE_PTS_ * 2])
     lmpts.set_shape([_PATCHES_, 2])
     mean_pts.set_shape([_PATCHES_, 2])
     incep_mean_pts.set_shape([_CORE_PTS_ * 2])
-    return gt_data, image, lmpts, mean_pts, incep_mean_pts
+    return cls_image, gt_data, image, lmpts, mean_pts, incep_mean_pts
 
 '''
 def decode_ims(image1):
@@ -405,7 +416,8 @@ def main():
                 Batch_size=_BATCH_SIZE_, Image_width=_IMAGE_WIDTH_, Image_height=_IMAGE_HEIGHT_,\
                Image_cspace=_IMAGE_CSPACE_, Classes=_CLASSES_, Save_dir=_SAVE_DIR_, \
                State=_STATE_, Dropout=_DROPOUT_, Grad_norm=_GRAD_NORM_, Renorm = _RENORM_, 
-                           iter=train_iterator, handle=handle, train_iter= train_iterator, core_pts = _CORE_PTS_,
+                           iter=train_iterator, handle=handle, train_iter= train_iterator,
+                           core_pts = _CORE_PTS_, pad_height=_PAD_HEIGHT_, pad_width=_PAD_WIDTH_,
                           test_iter= test_iterator, Patches=_PATCHES_, Training= _TRAINING_ )
 
     Optimizer_params_adam = {'beta1': 0.9, 'beta2':0.999, 'epsilon':0.1}
