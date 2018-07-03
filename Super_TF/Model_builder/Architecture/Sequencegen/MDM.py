@@ -7,7 +7,7 @@ import cv2
 import copy
 import numpy as np
 import sys
-_slim_path = '/home/dhruv/Projects/PersonalGit/tfslim/research/slim'
+_slim_path = '/home/dhruv/Projects/PersonalGit/tfslim/research/slim/'
 sys.path.append(_slim_path)
 slim = tf.contrib.slim
 #from nets.nasnet import pnasnet
